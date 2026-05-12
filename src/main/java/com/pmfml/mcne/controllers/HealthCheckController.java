@@ -25,17 +25,6 @@ public class HealthCheckController {
     this.dispatcher = dispatcher;
   }
 
-  @PostConstruct
-  public void testDispatcher() {
-    NotificationRequest request = new NotificationRequest(
-        "teste@example.com",
-        "Testando o Strategy Pattern diretamente no boot da aplicação!",
-        NotificationChannel.EMAIL,
-        Map.of("subject", "Teste de Integração")
-    );
-    dispatcher.dispatch(request);
-  }
-
   @GetMapping
   public ResponseEntity<SystemStatusResponse> checkStatus() {
     SystemStatusResponse response = new SystemStatusResponse(
