@@ -48,7 +48,10 @@ The architecture focuses on maintainability, extensibility, and high throughput:
    ```
 
 2. **Run the infrastructure (Database & Broker):**
-   _(Coming soon via docker-compose)_
+
+   ```bash
+   docker compose up -d
+   ```
 
 3. **Start the application:**
 

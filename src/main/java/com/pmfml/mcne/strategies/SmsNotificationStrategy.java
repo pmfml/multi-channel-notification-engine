@@ -2,6 +2,9 @@ package com.pmfml.mcne.strategies;
 
 import com.pmfml.mcne.dtos.NotificationRequest;
 import com.pmfml.mcne.enums.NotificationChannel;
+
+import jakarta.persistence.criteria.CriteriaBuilder.In;
+
 import org.springframework.stereotype.Component;
 
 @Component
@@ -14,7 +17,7 @@ public class SmsNotificationStrategy implements NotificationStrategy {
 
   @Override
   public void send(NotificationRequest request) {
-    // No futuro, aqui chamaremos a API do AWS SNS ou Twilio
+    // In the future, we will refer to the AWS SNS or Twilio API here.
     System.out.println("Enviando SMS para: " + request.recipient());
     System.out.println("Mensagem: " + request.message());
   }

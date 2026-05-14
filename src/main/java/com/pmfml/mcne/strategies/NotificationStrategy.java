@@ -6,12 +6,18 @@ import com.pmfml.mcne.enums.NotificationChannel;
 public interface NotificationStrategy {
 
   /**
-   * Método para o serviço descobrir se esta estratégia suporta o canal solicitado
+   * Determines if the current strategy supports the specified notification
+   * channel.
+   *
+   * @param channel the notification channel to evaluate
+   * @return true if the strategy supports the given channel, false otherwise
    */
   boolean supports(NotificationChannel channel);
 
   /**
-   * Método que efetivamente fará o envio
+   * Executes the delivery of the notification request.
+   *
+   * @param request the payload containing the notification details
    */
   void send(NotificationRequest request);
 }

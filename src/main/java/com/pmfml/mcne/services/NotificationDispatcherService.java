@@ -9,8 +9,6 @@ import java.util.List;
 @Service
 public class NotificationDispatcherService {
 
-  // O Spring injeta magicamente todas as classes que implementam
-  // NotificationStrategy aqui!
   private final List<NotificationStrategy> strategies;
 
   public NotificationDispatcherService(List<NotificationStrategy> strategies) {
