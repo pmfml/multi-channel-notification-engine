@@ -30,11 +30,14 @@ class NotificationDispatcherServiceTest {
     @Mock
     private NotificationStrategy smsStrategy;
 
+    @Mock
+    private NotificationLogService notificationLogService;
+
     private NotificationDispatcherService dispatcher;
 
     @BeforeEach
     void setUp() {
-        dispatcher = new NotificationDispatcherService(List.of(emailStrategy, smsStrategy));
+        dispatcher = new NotificationDispatcherService(List.of(emailStrategy, smsStrategy), notificationLogService);
     }
 
     @Test
@@ -51,6 +54,8 @@ class NotificationDispatcherServiceTest {
 
         verify(emailStrategy, times(1)).send(request);
         verify(smsStrategy, never()).send(any());
+
+        verify(notificationLogService, times(1)).savePendingLog(request);
     }
 
     @Test
@@ -70,5 +75,7 @@ class NotificationDispatcherServiceTest {
 
         assertEquals(
                 "Unsupported notification channel: PUSH", exception.getMessage());
+
+        verify(notificationLogService, never()).savePendingLog(any());
     }
 }

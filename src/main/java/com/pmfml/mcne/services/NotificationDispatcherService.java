@@ -10,9 +10,12 @@ import java.util.List;
 public class NotificationDispatcherService {
 
   private final List<NotificationStrategy> strategies;
+  private final NotificationLogService notificationLogService;
 
-  public NotificationDispatcherService(List<NotificationStrategy> strategies) {
+  public NotificationDispatcherService(List<NotificationStrategy> strategies,
+      NotificationLogService notificationLogService) {
     this.strategies = strategies;
+    this.notificationLogService = notificationLogService;
   }
 
   public void dispatch(NotificationRequest request) {
@@ -20,6 +23,8 @@ public class NotificationDispatcherService {
         .filter(s -> s.supports(request.channel()))
         .findFirst()
         .orElseThrow(() -> new IllegalArgumentException("Unsupported notification channel: " + request.channel()));
+
+    notificationLogService.savePendingLog(request);
 
     strategy.send(request);
   }
