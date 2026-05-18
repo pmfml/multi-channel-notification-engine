@@ -19,7 +19,7 @@ public class NotificationDispatcherService {
     NotificationStrategy strategy = strategies.stream()
         .filter(s -> s.supports(request.channel()))
         .findFirst()
-        .orElseThrow(() -> new IllegalArgumentException("Canal de notificação não suportado: " + request.channel()));
+        .orElseThrow(() -> new IllegalArgumentException("Unsupported notification channel: " + request.channel()));
 
     strategy.send(request);
   }

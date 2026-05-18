@@ -15,7 +15,7 @@ public class EmailNotificationStrategy implements NotificationStrategy {
   @Override
   public void send(NotificationRequest request) {
     // In the future, we will refer to the AWS SES or SendGrid API here.
-    System.out.println("Enviando EMAIL para: " + request.recipient());
-    System.out.println("Mensagem: " + request.message());
+    System.out.println("Sending EMAIL to: " + request.recipient());
+    System.out.println("Message: " + request.message());
   }
 }

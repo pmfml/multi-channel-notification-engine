@@ -69,6 +69,6 @@ class NotificationDispatcherServiceTest {
                 IllegalArgumentException.class, () -> dispatcher.dispatch(request));
 
         assertEquals(
-                "Canal de notificação não suportado: PUSH", exception.getMessage());
+                "Unsupported notification channel: PUSH", exception.getMessage());
     }
 }
