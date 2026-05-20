@@ -10,6 +10,13 @@ services:
       - "5435:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
+      
+  rabbitmq:
+    image: rabbitmq:3.13-management-alpine
+    container_name: mcne-rabbitmq
+    ports:
+      - "5672:5672" # Porta padrão de comunicação AMQP
+      - "15672:15672" # Porta do painel de administração (Management UI)
 
 volumes:
   postgres_data:

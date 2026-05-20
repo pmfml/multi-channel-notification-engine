@@ -19,6 +19,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 
 import com.pmfml.mcne.dtos.NotificationRequest;
 import com.pmfml.mcne.enums.NotificationChannel;
+import com.pmfml.mcne.producers.NotificationProducer;
 import com.pmfml.mcne.strategies.NotificationStrategy;
 
 @ExtendWith(MockitoExtension.class)
@@ -33,15 +34,19 @@ class NotificationDispatcherServiceTest {
     @Mock
     private NotificationLogService notificationLogService;
 
+    @Mock
+    private NotificationProducer producer;
+
     private NotificationDispatcherService dispatcher;
 
     @BeforeEach
     void setUp() {
-        dispatcher = new NotificationDispatcherService(List.of(emailStrategy, smsStrategy), notificationLogService);
+        dispatcher = new NotificationDispatcherService(List.of(emailStrategy, smsStrategy), notificationLogService,
+                producer);
     }
 
     @Test
-    void shouldDispatchToCorrectStrategyWhenChannelIsSupported() {
+    void shouldProcessMessageFromQueueSuccessfully() {
         NotificationRequest request = new NotificationRequest(
                 "test@example.com",
                 "Test Message",
@@ -50,16 +55,14 @@ class NotificationDispatcherServiceTest {
 
         when(emailStrategy.supports(NotificationChannel.EMAIL)).thenReturn(true);
 
-        dispatcher.dispatch(request);
+        dispatcher.processFromQueue(request);
 
         verify(emailStrategy, times(1)).send(request);
         verify(smsStrategy, never()).send(any());
-
-        verify(notificationLogService, times(1)).savePendingLog(request);
     }
 
     @Test
-    void shouldThrowExceptionWhenChannelIsNotSupported() {
+    void shouldThrowExceptionWhenProcessingUnsupportedChannel() {
         NotificationRequest request = new NotificationRequest(
                 "user",
                 "Msg",
@@ -67,15 +70,28 @@ class NotificationDispatcherServiceTest {
                 Map.of());
 
         when(emailStrategy.supports(NotificationChannel.PUSH)).thenReturn(false);
-
         when(smsStrategy.supports(NotificationChannel.PUSH)).thenReturn(false);
 
         IllegalArgumentException exception = assertThrows(
-                IllegalArgumentException.class, () -> dispatcher.dispatch(request));
+                IllegalArgumentException.class, () -> dispatcher.processFromQueue(request));
 
         assertEquals(
                 "Unsupported notification channel: PUSH", exception.getMessage());
+    }
 
-        verify(notificationLogService, never()).savePendingLog(any());
+    @Test
+    void shouldDispatchMessageToQueueSuccessfully() {
+        NotificationRequest request = new NotificationRequest(
+                "test@example.com",
+                "Test Message",
+                NotificationChannel.EMAIL,
+                Map.of());
+
+        when(emailStrategy.supports(NotificationChannel.EMAIL)).thenReturn(true);
+
+        dispatcher.dispatchToQueue(request);
+
+        verify(notificationLogService, times(1)).savePendingLog(request);
+        verify(producer, times(1)).publish(request);
     }
 }
