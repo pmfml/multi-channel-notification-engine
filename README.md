@@ -53,6 +53,8 @@ The architecture focuses on maintainability, extensibility, and high throughput:
    docker compose up -d
    ```
 
+   _Tip: You can access the RabbitMQ Management UI at `http://localhost:15672` (username: `guest`, password: `guest`)._
+
 3. **Start the application:**
 
    ```bash

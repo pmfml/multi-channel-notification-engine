@@ -15,8 +15,8 @@ services:
     image: rabbitmq:3.13-management-alpine
     container_name: mcne-rabbitmq
     ports:
-      - "5672:5672" # Porta padrão de comunicação AMQP
-      - "15672:15672" # Porta do painel de administração (Management UI)
+      - "5672:5672" # Default AMQP communication port
+      - "15672:15672" # Management UI port
 
 volumes:
   postgres_data:
