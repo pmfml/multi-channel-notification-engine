@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import java.util.List;
 
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -20,6 +21,11 @@ class NotificationLogRepositoryTest {
 
   @Autowired
   private NotificationLogRepository repository;
+
+  @BeforeEach
+  void setUp() {
+    repository.deleteAll();
+  }
 
   @Test
   @DisplayName("Should successfully save a notification log and generate UUID and timestamp")

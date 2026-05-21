@@ -4,7 +4,7 @@ import com.pmfml.mcne.config.RabbitMQConfig;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.stereotype.Component;
 
-import com.pmfml.mcne.dtos.NotificationRequest;
+import com.pmfml.mcne.dtos.NotificationEvent;
 
 @Component
 public class NotificationProducer {
@@ -15,10 +15,10 @@ public class NotificationProducer {
     this.template = template;
   }
 
-  public void publish(NotificationRequest request) {
+  public void publish(NotificationEvent event) {
     template.convertAndSend(
         RabbitMQConfig.NOTIFICATION_EXCHANGE,
         RabbitMQConfig.NOTIFICATION_ROUTING_KEY,
-        request);
+        event);
   }
 }

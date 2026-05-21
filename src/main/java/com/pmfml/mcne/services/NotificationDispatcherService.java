@@ -1,6 +1,9 @@
 package com.pmfml.mcne.services;
 
+import com.pmfml.mcne.dtos.NotificationEvent;
 import com.pmfml.mcne.dtos.NotificationRequest;
+import com.pmfml.mcne.entities.NotificationLog;
+import com.pmfml.mcne.enums.NotificationStatus;
 import com.pmfml.mcne.producers.NotificationProducer;
 import com.pmfml.mcne.strategies.NotificationStrategy;
 import org.springframework.stereotype.Service;
@@ -28,16 +31,23 @@ public class NotificationDispatcherService {
       throw new IllegalArgumentException("Unsupported notification channel: " + request.channel());
     }
 
-    notificationLogService.savePendingLog(request);
-    producer.publish(request);
+    NotificationLog log = notificationLogService.savePendingLog(request);
+    producer.publish(new NotificationEvent(log.getId(), request));
   }
 
-  public void processFromQueue(NotificationRequest request) {
+  public void processFromQueue(NotificationEvent event) {
     NotificationStrategy strategy = strategies.stream()
-        .filter(s -> s.supports(request.channel()))
+        .filter(s -> s.supports(event.request().channel()))
         .findFirst()
-        .orElseThrow(() -> new IllegalArgumentException("Unsupported notification channel: " + request.channel()));
+        .orElseThrow(
+            () -> new IllegalArgumentException("Unsupported notification channel: " + event.request().channel()));
 
-    strategy.send(request);
+    try {
+      strategy.send(event.request());
+      notificationLogService.updateStatus(event.logId(), NotificationStatus.SENT);
+    } catch (Exception e) {
+      notificationLogService.updateStatus(event.logId(), NotificationStatus.FAILED);
+      throw e;
+    }
   }
 }

@@ -1,5 +1,7 @@
 package com.pmfml.mcne.services;
 
+import java.util.UUID;
+
 import org.springframework.stereotype.Service;
 
 import com.pmfml.mcne.dtos.NotificationRequest;
@@ -33,4 +35,10 @@ public class NotificationLogService {
     return repository.save(notificationLog);
   }
 
+  public void updateStatus(UUID logId, NotificationStatus status) {
+    repository.findById(logId).ifPresent(log -> {
+      log.setStatus(status);
+      repository.save(log);
+    });
+  }
 }
