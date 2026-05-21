@@ -30,8 +30,17 @@ graph TD
         Strategies -->|Updates state SENT/FAILED| DB
     end
 
-    classDef infra fill:#f9f,stroke:#333,stroke-width:2px;
+    classDef client fill:#d4edda,stroke:#28a745,stroke-width:2px,color:#000000;
+    classDef core fill:#cce5ff,stroke:#007bff,stroke-width:2px,color:#000000;
+    classDef infra fill:#f8d7da,stroke:#dc3545,stroke-width:2px,color:#000000;
+    classDef worker fill:#fff3cd,stroke:#ffc107,stroke-width:2px,color:#000000;
+    classDef external fill:#e2e3e5,stroke:#6c757d,stroke-width:2px,color:#000000;
+
+    class Client client;
+    class Controller,Dispatcher,Producer core;
     class DB,RabbitMQ infra;
+    class Consumer,AsyncDispatcher,Strategies worker;
+    class EmailAPI,SMSAPI external;
 ```
 
 ---
@@ -44,12 +53,21 @@ This diagram illustrates the chronological flow of a notification request. Notic
 sequenceDiagram
     autonumber
     actor Client
-    participant API as REST Controller
-    participant DB as PostgreSQL (Log)
-    participant MQ as RabbitMQ
-    participant Worker as Async Consumer
-    participant Strategy as Strategy (Email/SMS)
-    participant External as External Provider
+
+    box rgb(204, 229, 255) MCNE Core
+        participant API as REST Controller
+    end
+    box rgb(248, 215, 218) Infrastructure
+        participant DB as PostgreSQL (Log)
+        participant MQ as RabbitMQ
+    end
+    box rgb(255, 243, 205) Async Worker
+        participant Worker as Async Consumer
+        participant Strategy as Strategy (Email/SMS)
+    end
+    box rgb(226, 227, 229) External Services
+        participant External as External Provider
+    end
 
     Client->>API: POST /api/v1/notifications
     activate API
@@ -113,4 +131,9 @@ classDiagram
     NotificationDispatcherService --> NotificationStrategy : Delegates sending
     NotificationStrategy <|.. EmailNotificationStrategy : Implements
     NotificationStrategy <|.. SmsNotificationStrategy : Implements
+
+    style NotificationDispatcherService fill:#cce5ff,stroke:#007bff,stroke-width:2px,color:#000000
+    style NotificationStrategy fill:#d4edda,stroke:#28a745,stroke-width:2px,color:#000000
+    style EmailNotificationStrategy fill:#fff3cd,stroke:#ffc107,stroke-width:2px,color:#000000
+    style SmsNotificationStrategy fill:#fff3cd,stroke:#ffc107,stroke-width:2px,color:#000000
 ```
