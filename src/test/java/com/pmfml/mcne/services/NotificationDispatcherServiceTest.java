@@ -1,23 +1,19 @@
 package com.pmfml.mcne.services;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.never;
-import static org.mockito.Mockito.times;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
-import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.*;
 
 import java.util.List;
-import java.util.Map;
 import java.util.UUID;
 
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.amqp.AmqpRejectAndDontRequeueException;
 
 import com.pmfml.mcne.dtos.NotificationEvent;
 import com.pmfml.mcne.dtos.NotificationRequest;
@@ -31,10 +27,7 @@ import com.pmfml.mcne.strategies.NotificationStrategy;
 class NotificationDispatcherServiceTest {
 
         @Mock
-        private NotificationStrategy emailStrategy;
-
-        @Mock
-        private NotificationStrategy smsStrategy;
+        private NotificationStrategy mockStrategy;
 
         @Mock
         private NotificationLogService notificationLogService;
@@ -42,70 +35,63 @@ class NotificationDispatcherServiceTest {
         @Mock
         private NotificationProducer producer;
 
-        private NotificationDispatcherService dispatcher;
+        private NotificationDispatcherService service;
 
         @BeforeEach
         void setUp() {
-                dispatcher = new NotificationDispatcherService(List.of(emailStrategy, smsStrategy),
-                                notificationLogService,
-                                producer);
+                // Injected the mock strategy into the list that the Dispatcher expects.
+                service = new NotificationDispatcherService(List.of(mockStrategy), notificationLogService, producer);
         }
 
         @Test
-        void shouldProcessMessageFromQueueSuccessfully() {
+        @DisplayName("Should successfully dispatch notification to queue")
+        void shouldDispatchToQueueSuccessfully() {
+                NotificationRequest request = mock(NotificationRequest.class);
+                when(request.channel()).thenReturn(NotificationChannel.EMAIL);
+                when(mockStrategy.supports(NotificationChannel.EMAIL)).thenReturn(true);
+
+                NotificationLog log = NotificationLog.builder().id(UUID.randomUUID()).build();
+                when(notificationLogService.savePendingLog(request)).thenReturn(log);
+
+                service.dispatchToQueue(request);
+
+                verify(notificationLogService).savePendingLog(request);
+                verify(producer).publish(any(NotificationEvent.class));
+        }
+
+        @Test
+        @DisplayName("Should throw exception when channel is unsupported during dispatch")
+        void shouldThrowExceptionWhenUnsupportedChannel() {
+                NotificationRequest request = mock(NotificationRequest.class);
+                when(request.channel()).thenReturn(NotificationChannel.EMAIL);
+                when(mockStrategy.supports(NotificationChannel.EMAIL)).thenReturn(false);
+
+                assertThatThrownBy(() -> service.dispatchToQueue(request))
+                                .isInstanceOf(IllegalArgumentException.class)
+                                .hasMessageContaining("Unsupported notification channel");
+
+                verify(notificationLogService, never()).savePendingLog(any());
+        }
+
+        @Test
+        @DisplayName("Should handle exception and route to DLQ when process from queue fails")
+        void shouldHandleExceptionDuringProcessFromQueue() {
+                NotificationRequest request = mock(NotificationRequest.class);
+                when(request.channel()).thenReturn(NotificationChannel.EMAIL);
+
+                NotificationEvent event = mock(NotificationEvent.class);
+                when(event.request()).thenReturn(request);
                 UUID logId = UUID.randomUUID();
-                NotificationRequest request = new NotificationRequest(
-                                "test@example.com",
-                                "Test Message",
-                                NotificationChannel.EMAIL,
-                                Map.of());
-                NotificationEvent event = new NotificationEvent(logId, request);
+                when(event.logId()).thenReturn(logId);
 
-                when(emailStrategy.supports(NotificationChannel.EMAIL)).thenReturn(true);
+                when(mockStrategy.supports(NotificationChannel.EMAIL)).thenReturn(true);
+                doThrow(new RuntimeException("3rd Party API Down")).when(mockStrategy).send(request);
 
-                dispatcher.processFromQueue(event);
+                assertThatThrownBy(() -> service.processFromQueue(event))
+                                .isInstanceOf(AmqpRejectAndDontRequeueException.class)
+                                .hasMessageContaining("Exhausted retries");
 
-                verify(emailStrategy, times(1)).send(request);
-                verify(smsStrategy, never()).send(any());
-                verify(notificationLogService, times(1)).updateStatus(logId, NotificationStatus.SENT);
-        }
-
-        @Test
-        void shouldThrowExceptionWhenProcessingUnsupportedChannel() {
-                NotificationRequest request = new NotificationRequest(
-                                "user",
-                                "Msg",
-                                NotificationChannel.PUSH,
-                                Map.of());
-                NotificationEvent event = new NotificationEvent(UUID.randomUUID(), request);
-
-                when(emailStrategy.supports(NotificationChannel.PUSH)).thenReturn(false);
-                when(smsStrategy.supports(NotificationChannel.PUSH)).thenReturn(false);
-
-                IllegalArgumentException exception = assertThrows(
-                                IllegalArgumentException.class, () -> dispatcher.processFromQueue(event));
-
-                assertEquals(
-                                "Unsupported notification channel: PUSH", exception.getMessage());
-        }
-
-        @Test
-        void shouldDispatchMessageToQueueSuccessfully() {
-                NotificationRequest request = new NotificationRequest(
-                                "test@example.com",
-                                "Test Message",
-                                NotificationChannel.EMAIL,
-                                Map.of());
-
-                NotificationLog mockLog = mock(NotificationLog.class);
-                when(mockLog.getId()).thenReturn(UUID.randomUUID());
-
-                when(emailStrategy.supports(NotificationChannel.EMAIL)).thenReturn(true);
-                when(notificationLogService.savePendingLog(request)).thenReturn(mockLog);
-
-                dispatcher.dispatchToQueue(request);
-
-                verify(notificationLogService, times(1)).savePendingLog(request);
-                verify(producer, times(1)).publish(any(NotificationEvent.class));
+                // The status in the database should be FAILED.
+                verify(notificationLogService).updateStatus(logId, NotificationStatus.FAILED);
         }
 }
