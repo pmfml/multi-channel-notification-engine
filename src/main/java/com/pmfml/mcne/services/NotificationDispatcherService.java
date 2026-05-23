@@ -6,6 +6,7 @@ import com.pmfml.mcne.entities.NotificationLog;
 import com.pmfml.mcne.enums.NotificationStatus;
 import com.pmfml.mcne.producers.NotificationProducer;
 import com.pmfml.mcne.strategies.NotificationStrategy;
+import org.springframework.amqp.AmqpRejectAndDontRequeueException;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -47,7 +48,7 @@ public class NotificationDispatcherService {
       notificationLogService.updateStatus(event.logId(), NotificationStatus.SENT);
     } catch (Exception e) {
       notificationLogService.updateStatus(event.logId(), NotificationStatus.FAILED);
-      throw e;
+      throw new AmqpRejectAndDontRequeueException("Exhausted retries. Message failed.", e);
     }
   }
 }

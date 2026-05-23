@@ -1,5 +1,6 @@
 package com.pmfml.mcne.consumers;
 
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.amqp.rabbit.annotation.RabbitListener;
 import org.springframework.stereotype.Component;
 
@@ -7,6 +8,7 @@ import com.pmfml.mcne.config.RabbitMQConfig;
 import com.pmfml.mcne.dtos.NotificationEvent;
 import com.pmfml.mcne.services.NotificationDispatcherService;
 
+@Slf4j
 @Component
 public class NotificationConsumer {
 
@@ -25,7 +27,7 @@ public class NotificationConsumer {
    */
   @RabbitListener(queues = RabbitMQConfig.NOTIFICATION_QUEUE)
   public void consume(NotificationEvent event) {
-    System.out.println("Message received for log ID: " + event.logId());
+    log.info("Message received for log ID: {}", event.logId());
     service.processFromQueue(event);
   }
 }
