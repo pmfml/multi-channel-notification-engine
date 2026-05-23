@@ -30,11 +30,12 @@ graph TD
         Strategies -->|Updates state SENT/FAILED| DB
     end
 
-    classDef client fill:#d4edda,stroke:#28a745,stroke-width:2px,color:#000000;
-    classDef core fill:#cce5ff,stroke:#007bff,stroke-width:2px,color:#000000;
-    classDef infra fill:#f8d7da,stroke:#dc3545,stroke-width:2px,color:#000000;
-    classDef worker fill:#fff3cd,stroke:#ffc107,stroke-width:2px,color:#000000;
-    classDef external fill:#e2e3e5,stroke:#6c757d,stroke-width:2px,color:#000000;
+    %% Aplicando as cores pastéis, fontes escuras e quinas arredondadas (rx, ry)
+    classDef client fill:#e2e3e5,stroke:#6c757d,stroke-width:2px,color:#000000,rx:10,ry:10;
+    classDef core fill:#cce5ff,stroke:#007bff,stroke-width:2px,color:#000000,rx:10,ry:10;
+    classDef infra fill:#f8d7da,stroke:#dc3545,stroke-width:2px,color:#000000,rx:10,ry:10;
+    classDef worker fill:#fff3cd,stroke:#ffc107,stroke-width:2px,color:#000000,rx:10,ry:10;
+    classDef external fill:#d4edda,stroke:#28a745,stroke-width:2px,color:#000000,rx:10,ry:10;
 
     class Client client;
     class Controller,Dispatcher,Producer core;
@@ -54,18 +55,18 @@ sequenceDiagram
     autonumber
     actor Client
 
-    box rgb(204, 229, 255) MCNE Core
+    box rgba(85, 128, 148, 0.65) MCNE Core
         participant API as REST Controller
     end
-    box rgb(248, 215, 218) Infrastructure
+    box rgba(248, 215, 218, 0.51) Infrastructure
         participant DB as PostgreSQL (Log)
         participant MQ as RabbitMQ
     end
-    box rgb(255, 243, 205) Async Worker
+    box rgba(255, 243, 205, 0.42) Async Worker
         participant Worker as Async Consumer
         participant Strategy as Strategy (Email/SMS)
     end
-    box rgb(226, 227, 229) External Services
+    box rgba(212, 237, 218, 0.43) External Services
         participant External as External Provider
     end
 
@@ -86,7 +87,7 @@ sequenceDiagram
     Strategy->>External: HTTP Request to 3rd Party API
 
     alt Success Delivery
-        External-->>Strategy: HTTP 200 OKz
+        External-->>Strategy: HTTP 200 OK
         Strategy->>DB: UPDATE NotificationLog (Status: SENT)
     else Failed Delivery
         External-->>Strategy: HTTP 500 / Timeout
