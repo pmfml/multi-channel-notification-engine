@@ -18,8 +18,8 @@ The architecture focuses on maintainability, extensibility, and high throughput:
 
 - **Strategy Pattern**: The core engine uses the Strategy pattern to resolve channels. This allows new notification providers (e.g., Slack, WhatsApp) to be added without modifying existing core logic.
 - **Asynchronous Processing**: Message brokers (RabbitMQ) and Java 21 Virtual Threads are used to handle I/O-bound tasks efficiently and prevent blocking operations.
-- **Resiliency**: Built-in retry mechanisms and exponential backoff to handle third-party API instability.
-- **Observability**: Spring Boot Actuator is integrated to provide health checks and metrics.
+- **Resiliency**: Built-in **Spring Retry** mechanism with exponential backoff to handle third-party API instability. If retries are exhausted, messages are securely routed to a **Dead Letter Queue (DLQ)** for later inspection and reprocessing, guaranteeing zero message loss.
+- **Observability**: Spring Boot Actuator is integrated to provide health checks and metrics. Logging is strictly handled via SLF4J.
 
 ## Technology Stack
 
@@ -63,14 +63,48 @@ The architecture focuses on maintainability, extensibility, and high throughput:
 
 4. **Verify Health Status:**
    The application exposes a custom health check endpoint:
+
    ```bash
-   curl -X GET http://localhost:8080/api/v1/status
+   curl -X GET http://localhost:8081/api/v1/status
    ```
+
    Expected Response:
+
    ```json
    {
      "status": "Up and Running",
      "environment": "Development",
      "timestamp": "2026-05-10T15:00:00Z"
    }
+   ```
+
+5. **Send a Notification:**
+   Use the following `cURL` command to dispatch an asynchronous notification request:
+
+   ```bash
+   curl -i -X POST http://localhost:8081/api/v1/notifications \
+   -H "Content-Type: application/json" \
+   -d '{
+     "recipient": "user@example.com",
+     "message": "Welcome to our platform!",
+     "channel": "EMAIL",
+     "metadata": {}
+   }'
+   ```
+
+   _Note: The API will return `202 Accepted` immediately, and the actual processing will occur asynchronously._
+
+6. **Reprocess Dead Letter Queue (DLQ):**
+   If a third-party provider is down, messages will fail after 3 retries and be moved to the DLQ (`notification.dlq`). Once the provider is back online, you can reprocess them using:
+   ```bash
+   curl -i -X POST http://localhost:8081/api/v1/notifications/dlq/reprocess
+   ```
+   Expected Response:
+   ```json
+   {
+     "message": "10 messages reprocessed successfully."
+   }
+   ```
+   ```
+
    ```

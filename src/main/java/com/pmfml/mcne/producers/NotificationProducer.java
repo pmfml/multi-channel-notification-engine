@@ -9,14 +9,14 @@ import com.pmfml.mcne.dtos.NotificationEvent;
 @Component
 public class NotificationProducer {
 
-  private final RabbitTemplate template;
+  private final RabbitTemplate rabbitTemplate;
 
-  public NotificationProducer(RabbitTemplate template) {
-    this.template = template;
+  public NotificationProducer(RabbitTemplate rabbitTemplate) {
+    this.rabbitTemplate = rabbitTemplate;
   }
 
   public void publish(NotificationEvent event) {
-    template.convertAndSend(
+    rabbitTemplate.convertAndSend(
         RabbitMQConfig.NOTIFICATION_EXCHANGE,
         RabbitMQConfig.NOTIFICATION_ROUTING_KEY,
         event);
