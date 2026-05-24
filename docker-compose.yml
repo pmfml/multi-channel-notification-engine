@@ -29,6 +29,11 @@ services:
       - SPRING_DATASOURCE_USERNAME=mcne_user
       - SPRING_DATASOURCE_PASSWORD=mcne_password
       - SPRING_RABBITMQ_HOST=rabbitmq
+      # AWS Credentials (read from the host OS terminal)
+      - AWS_REGION=${AWS_REGION:-us-east-2}
+      - AWS_ACCESS_KEY=${AWS_ACCESS_KEY}
+      - AWS_SECRET_KEY=${AWS_SECRET_KEY}
+      - AWS_VERIFIED_EMAIL=${AWS_VERIFIED_EMAIL}
     depends_on:
       - postgres
       - rabbitmq
