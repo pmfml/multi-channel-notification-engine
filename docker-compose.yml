@@ -18,5 +18,20 @@ services:
       - "5672:5672" # Default AMQP communication port
       - "15672:15672" # Management UI port
 
+  mcne-app:
+    build: .
+    container_name: mcne-app
+    ports:
+      - "8081:8081"
+    environment:
+      # Connect to the postgres container on its internal port 5432
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://postgres:5432/mcne_db
+      - SPRING_DATASOURCE_USERNAME=mcne_user
+      - SPRING_DATASOURCE_PASSWORD=mcne_password
+      - SPRING_RABBITMQ_HOST=rabbitmq
+    depends_on:
+      - postgres
+      - rabbitmq
+
 volumes:
   postgres_data:
