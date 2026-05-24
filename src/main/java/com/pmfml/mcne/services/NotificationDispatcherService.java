@@ -11,6 +11,11 @@ import org.springframework.stereotype.Service;
 
 import java.util.List;
 
+/**
+ * Service responsible for orchestrating the notification flow.
+ * It handles the initial dispatch to the message broker and the
+ * subsequent processing when messages are consumed from the queue.
+ */
 @Service
 public class NotificationDispatcherService {
 
@@ -26,6 +31,12 @@ public class NotificationDispatcherService {
     this.producer = producer;
   }
 
+  /**
+   * Validates the requested channel, creates a pending log entry in the database,
+   * and publishes the notification event to the message broker.
+   *
+   * @param request the notification request payload
+   */
   public void dispatchToQueue(NotificationRequest request) {
     boolean isSupported = strategies.stream().anyMatch(s -> s.supports(request.channel()));
     if (!isSupported) {
@@ -36,6 +47,14 @@ public class NotificationDispatcherService {
     producer.publish(new NotificationEvent(log.getId(), request));
   }
 
+  /**
+   * Processes a notification event consumed from the queue. Resolves the
+   * appropriate
+   * strategy and attempts to send the message. Updates the log status
+   * accordingly.
+   *
+   * @param event the consumed notification event
+   */
   public void processFromQueue(NotificationEvent event) {
     NotificationStrategy strategy = strategies.stream()
         .filter(s -> s.supports(event.request().channel()))

@@ -8,6 +8,9 @@ import com.pmfml.mcne.config.RabbitMQConfig;
 
 import lombok.extern.slf4j.Slf4j;
 
+/**
+ * Service responsible for handling operations related to the Dead Letter Queue (DLQ).
+ */
 @Slf4j
 @Service
 public class NotificationDlqService {
@@ -18,6 +21,12 @@ public class NotificationDlqService {
     this.rabbitTemplate = rabbitTemplate;
   }
 
+  /**
+   * Pulls all pending messages from the DLQ and routes them back to the main exchange
+   * for reprocessing.
+   *
+   * @return the total number of messages reprocessed
+   */
   public int reprocessMessages() {
     int count = 0;
     Message message;
