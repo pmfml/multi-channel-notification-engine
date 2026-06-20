@@ -30,12 +30,12 @@ graph TD
         Strategies -->|Updates state SENT/FAILED| DB
     end
 
-    %% Aplicando as cores pastéis, fontes escuras e quinas arredondadas (rx, ry)
-    classDef client fill:#e2e3e5,stroke:#6c757d,stroke-width:2px,color:#000000,rx:10,ry:10;
-    classDef core fill:#cce5ff,stroke:#007bff,stroke-width:2px,color:#000000,rx:10,ry:10;
-    classDef infra fill:#f8d7da,stroke:#dc3545,stroke-width:2px,color:#000000,rx:10,ry:10;
-    classDef worker fill:#fff3cd,stroke:#ffc107,stroke-width:2px,color:#000000,rx:10,ry:10;
-    classDef external fill:#d4edda,stroke:#28a745,stroke-width:2px,color:#000000,rx:10,ry:10;
+    %% Styling
+    classDef client fill:#e2e3e5,stroke:#6c757d,stroke-width:2px,color:#000000;
+    classDef core fill:#cce5ff,stroke:#007bff,stroke-width:2px,color:#000000;
+    classDef infra fill:#f8d7da,stroke:#dc3545,stroke-width:2px,color:#000000;
+    classDef worker fill:#fff3cd,stroke:#ffc107,stroke-width:2px,color:#000000;
+    classDef external fill:#d4edda,stroke:#28a745,stroke-width:2px,color:#000000;
 
     class Client client;
     class Controller,Dispatcher,Producer core;
@@ -55,18 +55,18 @@ sequenceDiagram
     autonumber
     actor Client
 
-    box rgba(85, 128, 148, 0.65) MCNE Core
+    box #85C1E9 MCNE Core
         participant API as REST Controller
     end
-    box rgba(248, 215, 218, 0.51) Infrastructure
+    box #F5B041 Infrastructure
         participant DB as PostgreSQL (Log)
         participant MQ as RabbitMQ
     end
-    box rgba(255, 243, 205, 0.42) Async Worker
+    box #F7DC6F Async Worker
         participant Worker as Async Consumer
         participant Strategy as Strategy (Email/SMS)
     end
-    box rgba(212, 237, 218, 0.43) External Services
+    box #82E0AA External Services
         participant External as External Provider
     end
 

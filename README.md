@@ -1,110 +1,108 @@
-# Multi-Channel Notification Engine (MCNE)
+# Multi-Channel Notification Engine (MCNE) ✉️📱🔔
 
-![Java](https://img.shields.io/badge/Java-21-orange?style=for-the-badge&logo=java)
-![Spring Boot](https://img.shields.io/badge/Spring_Boot-3.5.14-brightgreen?style=for-the-badge&logo=spring)
-![PostgreSQL](https://img.shields.io/badge/PostgreSQL-16-blue?style=for-the-badge&logo=postgresql)
-![RabbitMQ](https://img.shields.io/badge/RabbitMQ-Message_Broker-ff6600?style=for-the-badge&logo=rabbitmq)
-![Docker](https://img.shields.io/badge/Docker-Ready-blue?style=for-the-badge&logo=docker)
+**Multi-Channel Notification Engine (MCNE)** is a high-throughput backend service designed to centralize and standardize the delivery of notifications across multiple communication channels (Email, SMS, Webhooks, and Push Notifications).
 
-## Overview
+Acting as a central gateway in a microservices architecture, it allows different business domains to trigger outbound communication asynchronously without integrating directly with third-party providers or dealing with network retry logic.
 
-The **Multi-Channel Notification Engine** is a backend service designed to centralize and standardize the delivery of notifications across multiple channels, such as Email, SMS, Webhooks, and Push Notifications.
+---
 
-By acting as a central hub in a microservices architecture, it allows other business domains to trigger notifications without needing to integrate directly with external providers or handle delivery failures.
+## 🚀 Key Features
 
-## Architecture & Patterns
+*   **Strategy-Based Routing:** Uses the Strategy design pattern to dynamically route notification payloads to their respective channel providers.
+*   **Asynchronous Core:** Leverages Spring AMQP (RabbitMQ) queues and Java 21 Virtual Threads to achieve high concurrent I/O throughput.
+*   **Resiliency & Fault Tolerance:** Integrated with **Spring Retry** offering configurable exponential backoff. Failed deliveries are safely offloaded to a **Dead Letter Queue (DLQ)**.
+*   **Provider Independent:** Swappable implementation for services such as AWS SES, Twilio, and external HTTP Webhooks.
+*   **DLQ Recovery API:** Endpoint to trigger bulk reprocessing of dead-lettered notifications once external providers recover.
+*   **Observability:** Health, database migrator (Flyway) checks, and system diagnostics exposed via Spring Boot Actuator.
 
-The architecture focuses on maintainability, extensibility, and high throughput:
+---
 
-- **Strategy Pattern**: The core engine uses the Strategy pattern to resolve channels. This allows new notification providers (e.g., Slack, WhatsApp) to be added without modifying existing core logic.
-- **Asynchronous Processing**: Message brokers (RabbitMQ) and Java 21 Virtual Threads are used to handle I/O-bound tasks efficiently and prevent blocking operations.
-- **Resiliency**: Built-in **Spring Retry** mechanism with exponential backoff to handle third-party API instability. If retries are exhausted, messages are securely routed to a **Dead Letter Queue (DLQ)** for later inspection and reprocessing, guaranteeing zero message loss.
-- **Observability**: Spring Boot Actuator is integrated to provide health checks and metrics. Logging is strictly handled via SLF4J.
+## 🛠️ Technology Stack
 
-## Technology Stack
+*   **Language:** Java 21 (Virtual Threads, Records, Pattern Matching)
+*   **Framework:** Spring Boot 3.5.x with Spring Data JPA
+*   **Message Broker:** RabbitMQ
+*   **Database:** PostgreSQL 16
+*   **Migration Engine:** Flyway
+*   **Local Containerization:** Docker / Docker Compose
+*   **Testing:** JUnit 5, Mockito, Spring WebMvcTest
 
-- **Language**: Java 21 (Virtual Threads, Records, Pattern Matching)
-- **Framework**: Spring Boot 3.5.x
-- **Database**: PostgreSQL (Relational persistence for notification logs and statuses)
-- **Message Broker**: RabbitMQ (Asynchronous event-driven delivery)
-- **Migrations**: Flyway (Database schema versioning)
-- **Containerization**: Docker & Docker Compose
+---
 
-## Getting Started
+## 📋 Prerequisites
 
-### Prerequisites
+To run this application locally, you will need:
 
-- Java 21 SDK
-- Maven 3.8+
-- Docker & Docker Compose
+1.  **Java JDK 21** or higher.
+2.  **Docker & Docker Compose** installed and running.
+3.  **Maven 3.8+** (or use the included `./mvnw` wrapper).
 
-### Running the application locally
+---
 
-1. **Clone the repository:**
+## ⚙️ How to Get Started
 
-   ```bash
-   git clone https://github.com/your-username/multi-channel-notification-engine.git
-   cd multi-channel-notification-engine
-   ```
+### 1. Clone the repository
+```bash
+git clone https://github.com/<your-username>/multi-channel-notification-engine.git
+cd multi-channel-notification-engine
+```
 
-2. **Run the infrastructure (Database & Broker):**
+### 2. Infrastructure Setup (Docker)
+The project includes a `compose.yaml` file defining the PostgreSQL database (port **5432**) and RabbitMQ broker (management console on port **15672**).
 
-   ```bash
-   docker compose up -d
-   ```
+To start the infrastructure services, run:
+```bash
+docker compose up -d
+```
+_Tip: Access the RabbitMQ Management UI at `http://localhost:15672` (credentials: `guest` / `guest`)._
 
-   _Tip: You can access the RabbitMQ Management UI at `http://localhost:15672` (username: `guest`, password: `guest`)._
+### 3. Build & Run Tests
+Execute the unit and integration testing suite to confirm system integrity:
+```bash
+./mvnw clean test
+```
 
-3. **Start the application:**
+### 4. Running the Application
+Start the Spring Boot notification server:
+```bash
+./mvnw spring-boot:run
+```
+The REST API will be available at `http://localhost:8081`.
 
-   ```bash
-   ./mvnw spring-boot:run
-   ```
+---
 
-4. **Verify Health Status:**
-   The application exposes a custom health check endpoint:
+## 📡 REST API Documentation
 
-   ```bash
-   curl -X GET http://localhost:8081/api/v1/status
-   ```
+Below are the base endpoints available for Notification management:
 
-   Expected Response:
+| Method | Endpoint | Description | Status Code |
+| :--- | :--- | :--- | :--- |
+| **GET** | `/api/v1/status` | Retrieves the application health and uptime details | `200 OK` |
+| **POST** | `/api/v1/notifications` | Submits an asynchronous notification dispatch request | `202 Accepted` |
+| **POST** | `/api/v1/notifications/dlq/reprocess` | Retries sending all failed messages stored in the DLQ | `200 OK` |
 
-   ```json
-   {
-     "status": "Up and Running",
-     "environment": "Development",
-     "timestamp": "2026-05-10T15:00:00Z"
-   }
-   ```
+### Sample HTTP Payloads
 
-5. **Send a Notification:**
-   Use the following `cURL` command to dispatch an asynchronous notification request:
+#### Dispatch Notification (`POST /api/v1/notifications`)
+```json
+{
+  "recipient": "user@example.com",
+  "message": "Welcome to our platform!",
+  "channel": "EMAIL",
+  "metadata": {}
+}
+```
 
-   ```bash
-   curl -i -X POST http://localhost:8081/api/v1/notifications \
-   -H "Content-Type: application/json" \
-   -d '{
-     "recipient": "user@example.com",
-     "message": "Welcome to our platform!",
-     "channel": "EMAIL",
-     "metadata": {}
-   }'
-   ```
+#### DLQ Reprocessing Response (`POST /api/v1/notifications/dlq/reprocess`)
+```json
+{
+  "message": "10 messages reprocessed successfully."
+}
+```
 
-   _Note: The API will return `202 Accepted` immediately, and the actual processing will occur asynchronously._
+---
 
-6. **Reprocess Dead Letter Queue (DLQ):**
-   If a third-party provider is down, messages will fail after 3 retries and be moved to the DLQ (`notification.dlq`). Once the provider is back online, you can reprocess them using:
-   ```bash
-   curl -i -X POST http://localhost:8081/api/v1/notifications/dlq/reprocess
-   ```
-   Expected Response:
-   ```json
-   {
-     "message": "10 messages reprocessed successfully."
-   }
-   ```
-   ```
+## 📂 Project Structure & Coding Standards
 
-   ```
+Coding styles, architecture designs, and patterns are documented in the reference guides:
+*   [ARCHITECTURE.md](ARCHITECTURE.md): Component diagrams, sequence flows, database entity relationships, and retry logic.
