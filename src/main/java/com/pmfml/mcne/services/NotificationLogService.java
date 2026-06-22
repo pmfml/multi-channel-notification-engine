@@ -7,6 +7,7 @@ import org.springframework.stereotype.Service;
 import com.pmfml.mcne.dtos.NotificationRequest;
 import com.pmfml.mcne.entities.NotificationLog;
 import com.pmfml.mcne.enums.NotificationStatus;
+import com.pmfml.mcne.exceptions.ResourceNotFoundException;
 import com.pmfml.mcne.repositories.NotificationLogRepository;
 
 @Service
@@ -35,10 +36,19 @@ public class NotificationLogService {
     return repository.save(notificationLog);
   }
 
+  /**
+   * Updates the delivery status of an existing notification log entry.
+   *
+   * @param logId  the UUID of the NotificationLog to update
+   * @param status the new status to apply
+   * @throws ResourceNotFoundException if no log exists for the given ID
+   */
   public void updateStatus(UUID logId, NotificationStatus status) {
-    repository.findById(logId).ifPresent(log -> {
-      log.setStatus(status);
-      repository.save(log);
-    });
+    NotificationLog log = repository.findById(logId)
+        .orElseThrow(() -> new ResourceNotFoundException(
+            "NotificationLog not found for logId: " + logId));
+    log.setStatus(status);
+    repository.save(log);
   }
 }
+

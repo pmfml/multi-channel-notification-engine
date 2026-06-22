@@ -7,6 +7,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+import jakarta.validation.Valid;
 
 import com.pmfml.mcne.dtos.NotificationRequest;
 import com.pmfml.mcne.services.NotificationDispatcherService;
@@ -34,7 +35,7 @@ public class NotificationController {
    * @return HTTP 202 Accepted status
    */
   @PostMapping
-  public ResponseEntity<Void> sendNotification(@RequestBody NotificationRequest request) {
+  public ResponseEntity<Void> sendNotification(@Valid @RequestBody NotificationRequest request) {
     dispatcherService.dispatchToQueue(request);
     return ResponseEntity.accepted().build();
   }

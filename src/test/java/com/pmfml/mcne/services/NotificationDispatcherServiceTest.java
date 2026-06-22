@@ -89,7 +89,7 @@ class NotificationDispatcherServiceTest {
 
                 assertThatThrownBy(() -> service.processFromQueue(event))
                                 .isInstanceOf(AmqpRejectAndDontRequeueException.class)
-                                .hasMessageContaining("Exhausted retries");
+                                .hasMessageContaining("Routing to DLQ");
 
                 // The status in the database should be FAILED.
                 verify(notificationLogService).updateStatus(logId, NotificationStatus.FAILED);

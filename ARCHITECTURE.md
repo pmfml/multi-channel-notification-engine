@@ -30,6 +30,9 @@ graph TD
         Strategies -->|Updates state SENT/FAILED| DB
     end
 
+    RabbitMQ -->|On exhausted retries| DLQ[(Dead Letter Queue)]
+    DLQ -->|POST /dlq/reprocess| Controller
+
     %% Styling
     classDef client fill:#e2e3e5,stroke:#6c757d,stroke-width:2px,color:#000000;
     classDef core fill:#cce5ff,stroke:#007bff,stroke-width:2px,color:#000000;
@@ -39,16 +42,16 @@ graph TD
 
     class Client client;
     class Controller,Dispatcher,Producer core;
-    class DB,RabbitMQ infra;
+    class DB,RabbitMQ,DLQ infra;
     class Consumer,AsyncDispatcher,Strategies worker;
     class EmailAPI,SMSAPI external;
 ```
 
 ---
 
-## 2. Sequence Diagram (Asynchronous Flow & Timing)
+## 2. Sequence Diagram (Asynchronous Flow, Retry & DLQ)
 
-This diagram illustrates the chronological flow of a notification request. Notice how the HTTP thread is freed almost immediately (returning a `202 Accepted`), while the heavy lifting is done in the background by a separate worker thread.
+This diagram illustrates the full chronological flow of a notification request, including the retry mechanism and Dead Letter Queue routing on persistent failure.
 
 ```mermaid
 sequenceDiagram
@@ -61,6 +64,7 @@ sequenceDiagram
     box #F5B041 Infrastructure
         participant DB as PostgreSQL (Log)
         participant MQ as RabbitMQ
+        participant DLQ as Dead Letter Queue
     end
     box #F7DC6F Async Worker
         participant Worker as Async Consumer
@@ -74,7 +78,7 @@ sequenceDiagram
     activate API
     API->>DB: INSERT NotificationLog (Status: PENDING)
     DB-->>API: Log ID generated
-    API->>MQ: Publish NotificationRequest Message
+    API->>MQ: Publish NotificationEvent
     API-->>Client: HTTP 202 Accepted
     deactivate API
 
@@ -86,17 +90,29 @@ sequenceDiagram
     activate Strategy
     Strategy->>External: HTTP Request to 3rd Party API
 
-    alt Success Delivery
+    alt Successful Delivery
         External-->>Strategy: HTTP 200 OK
         Strategy->>DB: UPDATE NotificationLog (Status: SENT)
-    else Failed Delivery
-        External-->>Strategy: HTTP 500 / Timeout
+    else Transient Failure (network error)
+        External-->>Strategy: Timeout / Connection error
+        Note over Strategy: @Retryable kicks in — up to 3 attempts<br/>with exponential backoff (2s, 4s)
+        Strategy->>External: Retry attempt...
+        External-->>Strategy: HTTP 200 OK
+        Strategy->>DB: UPDATE NotificationLog (Status: SENT)
+    else Persistent Failure (all retries exhausted)
+        External-->>Strategy: Permanent error
         Strategy->>DB: UPDATE NotificationLog (Status: FAILED)
-        Note over Strategy,Worker: (Future) Retry mechanism kicks in here
+        Worker->>MQ: AmqpRejectAndDontRequeueException
+        MQ->>DLQ: Route message to Dead Letter Queue
     end
 
     deactivate Strategy
     deactivate Worker
+
+    Note over DLQ: Message waits in DLQ until manually reprocessed.
+    Client->>API: POST /api/v1/notifications/dlq/reprocess
+    API->>DLQ: Pull all messages
+    API->>MQ: Re-publish to main exchange
 ```
 
 ---
@@ -110,7 +126,7 @@ classDiagram
     class NotificationDispatcherService {
         - List~NotificationStrategy~ strategies
         + dispatchToQueue(NotificationRequest)
-        + processFromQueue(NotificationRequest)
+        + processFromQueue(NotificationEvent)
     }
 
     class NotificationStrategy {
@@ -120,11 +136,13 @@ classDiagram
     }
 
     class EmailNotificationStrategy {
+        - SesClient sesClient
         + supports(NotificationChannel) boolean
         + send(NotificationRequest) void
     }
 
     class SmsNotificationStrategy {
+        - SnsClient snsClient
         + supports(NotificationChannel) boolean
         + send(NotificationRequest) void
     }
@@ -138,3 +156,42 @@ classDiagram
     style EmailNotificationStrategy fill:#fff3cd,stroke:#ffc107,stroke-width:2px,color:#000000
     style SmsNotificationStrategy fill:#fff3cd,stroke:#ffc107,stroke-width:2px,color:#000000
 ```
+
+---
+
+## 4. Database Schema
+
+The `notification_log` table is the single source of truth for tracking the lifecycle of every dispatched notification.
+
+```mermaid
+erDiagram
+    NOTIFICATION_LOG {
+        UUID id PK "Generated (UUID strategy)"
+        VARCHAR customer_name_email "Recipient address or phone number (max 100)"
+        VARCHAR message "Notification body text (max 300)"
+        VARCHAR channel "EMAIL | SMS | PUSH"
+        VARCHAR status "PENDING | SENT | FAILED"
+        TIMESTAMP created_at "Auto-set on insert"
+    }
+```
+
+**Status Lifecycle:**
+
+```
+PENDING  →  SENT    (delivery confirmed by external provider)
+PENDING  →  FAILED  (all retry attempts exhausted)
+FAILED   →  PENDING (via DLQ reprocessing endpoint)
+```
+
+---
+
+## 5. Retry & DLQ Architecture
+
+The resiliency pipeline consists of two independent layers:
+
+| Layer | Mechanism | Scope | Configuration |
+|---|---|---|---|
+| **Application-level** | `@Retryable(SdkClientException)` | Transient network errors | 3 attempts, 2s/4s backoff |
+| **Broker-level** | RabbitMQ Dead Letter Exchange (DLX) | Messages rejected after all retries | Durable DLQ, manual reprocessing |
+
+> **Important:** `@Retryable` is configured to only retry `SdkClientException` (network/timeout errors). Permanent AWS service errors (e.g., unverified sender address) are **not** retried and go directly to the DLQ.

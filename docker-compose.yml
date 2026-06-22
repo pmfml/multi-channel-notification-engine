@@ -3,9 +3,9 @@ services:
     image: postgres:16-alpine
     container_name: mcne-postgres
     environment:
-      POSTGRES_USER: mcne_user
-      POSTGRES_PASSWORD: mcne_password
-      POSTGRES_DB: mcne_db
+      POSTGRES_USER: ${DB_USERNAME}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      POSTGRES_DB: ${DB_NAME}
     ports:
       - "5435:5432"
     volumes:
@@ -25,11 +25,11 @@ services:
       - "8081:8081"
     environment:
       # Connect to the postgres container on its internal port 5432
-      - SPRING_DATASOURCE_URL=jdbc:postgresql://postgres:5432/mcne_db
-      - SPRING_DATASOURCE_USERNAME=mcne_user
-      - SPRING_DATASOURCE_PASSWORD=mcne_password
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://postgres:5432/${DB_NAME}
+      - SPRING_DATASOURCE_USERNAME=${DB_USERNAME}
+      - SPRING_DATASOURCE_PASSWORD=${DB_PASSWORD}
       - SPRING_RABBITMQ_HOST=rabbitmq
-      # AWS Credentials (read from the host OS terminal)
+      # AWS Credentials — read from .env file or host OS environment
       - AWS_REGION=${AWS_REGION:-us-east-2}
       - AWS_ACCESS_KEY=${AWS_ACCESS_KEY}
       - AWS_SECRET_KEY=${AWS_SECRET_KEY}

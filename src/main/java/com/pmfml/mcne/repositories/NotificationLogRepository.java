@@ -10,5 +10,9 @@ import com.pmfml.mcne.enums.NotificationStatus;
 
 public interface NotificationLogRepository extends JpaRepository<NotificationLog, UUID> {
 
+  /**
+   * Retrieves all notification logs with the given status.
+   * Reserved for future use in a dedicated query endpoint (e.g., GET /api/v1/notifications?status=FAILED).
+   */
   List<NotificationLog> findByStatus(NotificationStatus status);
 }

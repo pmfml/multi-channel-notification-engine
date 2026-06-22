@@ -6,6 +6,7 @@ import com.pmfml.mcne.entities.NotificationLog;
 import com.pmfml.mcne.enums.NotificationStatus;
 import com.pmfml.mcne.producers.NotificationProducer;
 import com.pmfml.mcne.strategies.NotificationStrategy;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.amqp.AmqpRejectAndDontRequeueException;
 import org.springframework.stereotype.Service;
 
@@ -16,6 +17,7 @@ import java.util.List;
  * It handles the initial dispatch to the message broker and the
  * subsequent processing when messages are consumed from the queue.
  */
+@Slf4j
 @Service
 public class NotificationDispatcherService {
 
@@ -48,10 +50,10 @@ public class NotificationDispatcherService {
   }
 
   /**
-   * Processes a notification event consumed from the queue. Resolves the
-   * appropriate
-   * strategy and attempts to send the message. Updates the log status
-   * accordingly.
+   * Processes a notification event consumed from the queue. Resolves the appropriate
+   * strategy and attempts to send the message. Updates the log status accordingly.
+   * On failure, marks the log as FAILED and re-throws an {@link AmqpRejectAndDontRequeueException}
+   * so that RabbitMQ routes the message to the Dead Letter Queue.
    *
    * @param event the consumed notification event
    */
@@ -66,8 +68,15 @@ public class NotificationDispatcherService {
       strategy.send(event.request());
       notificationLogService.updateStatus(event.logId(), NotificationStatus.SENT);
     } catch (Exception e) {
-      notificationLogService.updateStatus(event.logId(), NotificationStatus.FAILED);
-      throw new AmqpRejectAndDontRequeueException("Exhausted retries. Message failed.", e);
+      // Attempt to mark the log as FAILED. If the log entry itself cannot be found,
+      // log a warning but still ensure the message is sent to the DLQ.
+      try {
+        notificationLogService.updateStatus(event.logId(), NotificationStatus.FAILED);
+      } catch (Exception updateEx) {
+        log.warn("Could not update log status to FAILED for logId={}: {}", event.logId(), updateEx.getMessage());
+      }
+      throw new AmqpRejectAndDontRequeueException(
+          "Strategy failed after retries for logId=" + event.logId() + ". Routing to DLQ.", e);
     }
   }
 }
