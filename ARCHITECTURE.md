@@ -195,3 +195,19 @@ The resiliency pipeline consists of two independent layers:
 | **Broker-level** | RabbitMQ Dead Letter Exchange (DLX) | Messages rejected after all retries | Durable DLQ, manual reprocessing |
 
 > **Important:** `@Retryable` is configured to only retry `SdkClientException` (network/timeout errors). Permanent AWS service errors (e.g., unverified sender address) are **not** retried and go directly to the DLQ.
+
+---
+
+## 6. Real-Time Observability (WebSockets)
+
+To allow for real-time visual tracking of the asynchronous lifecycle, the engine implements a non-blocking **Observer Pattern** via STOMP WebSockets (`/ws-mcne`).
+
+The `WebSocketEventPublisher` service broadcasts state changes to the `/topic/notifications` channel. These events include:
+*   `QUEUED`: Emitted by the `NotificationDispatcherService` when a message is successfully sent to RabbitMQ.
+*   `PROCESSING`: Emitted by the `NotificationConsumer` when a worker thread picks up the message.
+*   `SENT`: Emitted by the strategies (`EmailNotificationStrategy`, `SmsNotificationStrategy`) upon successful AWS delivery.
+*   `RETRYING`: Emitted by strategies when catching a transient `SdkClientException` before Spring Retry kicks in.
+*   `DLQ`: Emitted before routing a permanently failed message to the Dead Letter Exchange.
+
+**Demo & Simulation Mode:**
+For demonstration and portfolio purposes, the engine supports a secure simulation mode. If an incoming HTTP request contains the header `X-MCNE-Client: Visualizer`, the engine allows the injection of specific metadata flags (`demoDelayMs` for artificial queue bottlenecking and `simulateError=true` to force AWS SDK exceptions). This allows external visualizers to demonstrate the retry and DLQ resiliency mechanisms safely, without polluting production traffic.

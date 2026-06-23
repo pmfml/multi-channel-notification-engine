@@ -11,6 +11,7 @@ Acting as a central gateway in a microservices architecture, it allows different
 *   **Strategy-Based Routing:** Uses the Strategy design pattern to dynamically route notification payloads to their respective channel providers.
 *   **Asynchronous Core:** Leverages Spring AMQP (RabbitMQ) queues and Java 21 Virtual Threads to achieve high concurrent I/O throughput.
 *   **Resiliency & Fault Tolerance:** Integrated with **Spring Retry** offering configurable exponential backoff (retries only on transient network errors). Failed deliveries are safely offloaded to a **Dead Letter Queue (DLQ)**.
+*   **Real-Time Observability:** Broadcasts asynchronous state changes (QUEUED, PROCESSING, RETRYING, SENT, DLQ) via STOMP **WebSockets**, allowing seamless integration with frontend visualizers.
 *   **Provider Independent:** Swappable implementation for services such as AWS SES, Twilio, and external HTTP Webhooks.
 *   **DLQ Recovery API:** Endpoint to trigger bulk reprocessing of dead-lettered notifications once external providers recover.
 *   **Observability:** Health and system diagnostics exposed via Spring Boot Actuator (`/actuator/health`, `/actuator/info`).
