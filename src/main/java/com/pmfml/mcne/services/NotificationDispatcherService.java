@@ -9,6 +9,8 @@ import com.pmfml.mcne.strategies.NotificationStrategy;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.amqp.AmqpRejectAndDontRequeueException;
 import org.springframework.stereotype.Service;
+import com.pmfml.mcne.services.WebSocketEventPublisher;
+import com.pmfml.mcne.dtos.WebSocketNotificationEvent;
 
 import java.util.List;
 
@@ -24,13 +26,16 @@ public class NotificationDispatcherService {
   private final List<NotificationStrategy> strategies;
   private final NotificationLogService notificationLogService;
   private final NotificationProducer producer;
+  private final WebSocketEventPublisher wsPublisher;
 
   public NotificationDispatcherService(List<NotificationStrategy> strategies,
       NotificationLogService notificationLogService,
-      NotificationProducer producer) {
+      NotificationProducer producer,
+      WebSocketEventPublisher wsPublisher) {
     this.strategies = strategies;
     this.notificationLogService = notificationLogService;
     this.producer = producer;
+    this.wsPublisher = wsPublisher;
   }
 
   /**
@@ -45,8 +50,15 @@ public class NotificationDispatcherService {
       throw new IllegalArgumentException("Unsupported notification channel: " + request.channel());
     }
 
-    NotificationLog log = notificationLogService.savePendingLog(request);
-    producer.publish(new NotificationEvent(log.getId(), request));
+    NotificationLog logEntry = notificationLogService.savePendingLog(request);
+    producer.publish(new NotificationEvent(logEntry.getId(), request));
+    
+    wsPublisher.publish(new WebSocketNotificationEvent(
+        logEntry.getId(), 
+        "QUEUED", 
+        request.channel().name(), 
+        request.message()
+    ));
   }
 
   /**

@@ -22,6 +22,7 @@ import com.pmfml.mcne.enums.NotificationChannel;
 import com.pmfml.mcne.enums.NotificationStatus;
 import com.pmfml.mcne.producers.NotificationProducer;
 import com.pmfml.mcne.strategies.NotificationStrategy;
+import com.pmfml.mcne.services.WebSocketEventPublisher;
 
 @ExtendWith(MockitoExtension.class)
 class NotificationDispatcherServiceTest {
@@ -35,12 +36,15 @@ class NotificationDispatcherServiceTest {
         @Mock
         private NotificationProducer producer;
 
+        @Mock
+        private WebSocketEventPublisher wsPublisher;
+
         private NotificationDispatcherService service;
 
         @BeforeEach
         void setUp() {
                 // Injected the mock strategy into the list that the Dispatcher expects.
-                service = new NotificationDispatcherService(List.of(mockStrategy), notificationLogService, producer);
+                service = new NotificationDispatcherService(List.of(mockStrategy), notificationLogService, producer, wsPublisher);
         }
 
         @Test
@@ -50,6 +54,7 @@ class NotificationDispatcherServiceTest {
                 when(request.channel()).thenReturn(NotificationChannel.EMAIL);
                 when(mockStrategy.supports(NotificationChannel.EMAIL)).thenReturn(true);
 
+                when(request.message()).thenReturn("Test Message");
                 NotificationLog log = NotificationLog.builder().id(UUID.randomUUID()).build();
                 when(notificationLogService.savePendingLog(request)).thenReturn(log);
 
@@ -57,6 +62,7 @@ class NotificationDispatcherServiceTest {
 
                 verify(notificationLogService).savePendingLog(request);
                 verify(producer).publish(any(NotificationEvent.class));
+                verify(wsPublisher).publish(any());
         }
 
         @Test
