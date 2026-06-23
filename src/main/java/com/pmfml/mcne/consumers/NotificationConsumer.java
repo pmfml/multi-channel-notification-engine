@@ -41,15 +41,18 @@ public class NotificationConsumer {
     ));
 
     if (event.request().metadata() != null && event.request().metadata().containsKey("demoDelayMs")) {
-      try {
-        long delay = Long.parseLong(event.request().metadata().get("demoDelayMs"));
-        if (delay > 0) {
-          log.info("Applying simulated delay of {}ms for log ID: {}", delay, event.logId());
-          Thread.sleep(delay);
+      boolean isVisualizer = "true".equalsIgnoreCase(event.request().metadata().get("isVisualizerClient"));
+      if (isVisualizer) {
+        try {
+          long delay = Long.parseLong(event.request().metadata().get("demoDelayMs"));
+          if (delay > 0) {
+            log.info("Applying simulated delay of {}ms for log ID: {}", delay, event.logId());
+            Thread.sleep(delay);
+          }
+        } catch (InterruptedException | NumberFormatException e) {
+          log.warn("Invalid demo delay or thread interrupted for log ID: {}", event.logId());
+          Thread.currentThread().interrupt();
         }
-      } catch (InterruptedException | NumberFormatException e) {
-        log.warn("Invalid demo delay or thread interrupted for log ID: {}", event.logId());
-        Thread.currentThread().interrupt();
       }
     }
 

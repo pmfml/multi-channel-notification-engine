@@ -77,7 +77,7 @@ public class NotificationDispatcherService {
             () -> new IllegalArgumentException("Unsupported notification channel: " + event.request().channel()));
 
     try {
-      strategy.send(event.request());
+      strategy.send(event.logId(), event.request());
       notificationLogService.updateStatus(event.logId(), NotificationStatus.SENT);
     } catch (Exception e) {
       // Attempt to mark the log as FAILED. If the log entry itself cannot be found,
@@ -87,6 +87,9 @@ public class NotificationDispatcherService {
       } catch (Exception updateEx) {
         log.warn("Could not update log status to FAILED for logId={}: {}", event.logId(), updateEx.getMessage());
       }
+      wsPublisher.publish(new WebSocketNotificationEvent(
+          event.logId(), "DLQ", event.request().channel().name(), "Message routed to DLQ after retries"
+      ));
       throw new AmqpRejectAndDontRequeueException(
           "Strategy failed after retries for logId=" + event.logId() + ". Routing to DLQ.", e);
     }

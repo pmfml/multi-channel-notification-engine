@@ -2,6 +2,7 @@ package com.pmfml.mcne.controllers;
 
 import java.util.Map;
 
+import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -35,8 +36,21 @@ public class NotificationController {
    * @return HTTP 202 Accepted status
    */
   @PostMapping
-  public ResponseEntity<Void> sendNotification(@Valid @RequestBody NotificationRequest request) {
-    dispatcherService.dispatchToQueue(request);
+  public ResponseEntity<Void> sendNotification(
+      @Valid @RequestBody NotificationRequest request,
+      @RequestHeader(value = "X-MCNE-Client", required = false) String clientHeader) {
+      
+    NotificationRequest finalRequest = request;
+    if ("Visualizer".equals(clientHeader)) {
+      java.util.Map<String, String> updatedMetadata = new java.util.HashMap<>();
+      if (request.metadata() != null) {
+        updatedMetadata.putAll(request.metadata());
+      }
+      updatedMetadata.put("isVisualizerClient", "true");
+      finalRequest = new NotificationRequest(request.recipient(), request.message(), request.channel(), updatedMetadata);
+    }
+
+    dispatcherService.dispatchToQueue(finalRequest);
     return ResponseEntity.accepted().build();
   }
 

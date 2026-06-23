@@ -91,7 +91,7 @@ class NotificationDispatcherServiceTest {
                 when(event.logId()).thenReturn(logId);
 
                 when(mockStrategy.supports(NotificationChannel.EMAIL)).thenReturn(true);
-                doThrow(new RuntimeException("3rd Party API Down")).when(mockStrategy).send(request);
+                doThrow(new RuntimeException("3rd Party API Down")).when(mockStrategy).send(eq(logId), eq(request));
 
                 assertThatThrownBy(() -> service.processFromQueue(event))
                                 .isInstanceOf(AmqpRejectAndDontRequeueException.class)

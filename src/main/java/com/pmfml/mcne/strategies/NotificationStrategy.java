@@ -3,6 +3,8 @@ package com.pmfml.mcne.strategies;
 import com.pmfml.mcne.dtos.NotificationRequest;
 import com.pmfml.mcne.enums.NotificationChannel;
 
+import java.util.UUID;
+
 public interface NotificationStrategy {
 
   /**
@@ -17,7 +19,8 @@ public interface NotificationStrategy {
   /**
    * Executes the delivery of the notification request.
    *
+   * @param logId the unique identifier of the notification log
    * @param request the payload containing the notification details
    */
-  void send(NotificationRequest request);
+  void send(UUID logId, NotificationRequest request);
 }
