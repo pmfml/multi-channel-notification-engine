@@ -2,7 +2,7 @@ import { Client, IMessage } from '@stomp/stompjs';
 
 export interface WebSocketNotificationEvent {
   logId: string;
-  status: string; // QUEUED, PROCESSING, RETRYING, SENT, DLQ
+  eventType: string; // QUEUED, PROCESSING, RETRYING, SENT, DLQ
   channel: string;
   message: string;
 }

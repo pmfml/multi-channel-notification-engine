@@ -33,6 +33,19 @@ public class NotificationConsumer {
   public void consume(NotificationEvent event) {
     log.info("Message received for log ID: {}", event.logId());
     
+    // DELAY BEFORE EMITTING PROCESSING (Keeps dot in RabbitMQ for visual effect)
+    if (event.request().metadata() != null && event.request().metadata().containsKey("demoDelayMs")) {
+      boolean isVisualizer = "true".equalsIgnoreCase(event.request().metadata().get("isVisualizerClient"));
+      if (isVisualizer) {
+        try {
+          long delay = Long.parseLong(event.request().metadata().get("demoDelayMs"));
+          if (delay > 0) Thread.sleep(delay);
+        } catch (InterruptedException | NumberFormatException e) {
+          Thread.currentThread().interrupt();
+        }
+      }
+    }
+
     wsPublisher.publish(new WebSocketNotificationEvent(
         event.logId(), 
         "PROCESSING", 
@@ -40,17 +53,14 @@ public class NotificationConsumer {
         event.request().message()
     ));
 
+    // DELAY AGAIN BEFORE EXECUTING STRATEGY (Keeps dot in Consumer for visual effect)
     if (event.request().metadata() != null && event.request().metadata().containsKey("demoDelayMs")) {
       boolean isVisualizer = "true".equalsIgnoreCase(event.request().metadata().get("isVisualizerClient"));
       if (isVisualizer) {
         try {
           long delay = Long.parseLong(event.request().metadata().get("demoDelayMs"));
-          if (delay > 0) {
-            log.info("Applying simulated delay of {}ms for log ID: {}", delay, event.logId());
-            Thread.sleep(delay);
-          }
+          if (delay > 0) Thread.sleep(delay);
         } catch (InterruptedException | NumberFormatException e) {
-          log.warn("Invalid demo delay or thread interrupted for log ID: {}", event.logId());
           Thread.currentThread().interrupt();
         }
       }

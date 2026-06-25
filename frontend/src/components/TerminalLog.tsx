@@ -51,10 +51,10 @@ export const TerminalLog: React.FC<TerminalLogProps> = ({ events }) => {
           <div className="space-y-2">
             {events.map((evt, idx) => (
               <div key={idx} className="flex items-start space-x-3">
-                <span className="mt-0.5">{getStatusIcon(evt.status)}</span>
+                <span className="mt-0.5">{getStatusIcon(evt.eventType)}</span>
                 <span className="text-slate-500 shrink-0">[{new Date().toLocaleTimeString()}]</span>
-                <span className={`font-bold shrink-0 ${getStatusColor(evt.status)}`}>
-                  [{evt.status}]
+                <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${getStatusColor(evt.eventType)}`}>
+                  {evt.eventType}
                 </span>
                 <span className="text-blue-300 shrink-0">[{evt.channel}]</span>
                 <span className="text-slate-400 break-words line-clamp-1">{evt.message}</span>

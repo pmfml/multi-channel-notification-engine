@@ -20,15 +20,15 @@ export const VisualPipeline: React.FC<VisualPipelineProps> = ({ events }) => {
   // Count messages in each node
   const counts = useMemo(() => {
     return {
-      API: activeMessages.filter(m => m.status === 'RECEIVED' || m.status === 'QUEUED').length,
-      RABBIT: activeMessages.filter(m => m.status === 'QUEUED').length,
-      CONSUMER: activeMessages.filter(m => m.status === 'PROCESSING' || m.status === 'RETRYING').length,
-      SUCCESS: activeMessages.filter(m => m.status === 'SENT').length,
-      DLQ: activeMessages.filter(m => m.status === 'DLQ').length,
+      API: activeMessages.filter(m => m.eventType === 'RECEIVED' || m.eventType === 'QUEUED').length,
+      RABBIT: activeMessages.filter(m => m.eventType === 'QUEUED').length,
+      CONSUMER: activeMessages.filter(m => m.eventType === 'PROCESSING' || m.eventType === 'RETRYING').length,
+      SUCCESS: activeMessages.filter(m => m.eventType === 'SENT').length,
+      DLQ: activeMessages.filter(m => m.eventType === 'DLQ').length,
     };
   }, [activeMessages]);
 
-  const Node = ({ title, icon: Icon, count, isActive, color }: any) => {
+  const Node = ({ title, icon: Icon, count, isActive, color, left, top, subtitle }: any) => {
     const colors: Record<string, { border: string, iconBg: string, iconText: string, shadow: string, badge: string }> = {
       blue: { border: 'border-blue-500', iconBg: 'bg-blue-100', iconText: 'text-blue-600', shadow: 'shadow-blue-100', badge: 'bg-blue-500' },
       orange: { border: 'border-orange-500', iconBg: 'bg-orange-100', iconText: 'text-orange-600', shadow: 'shadow-orange-100', badge: 'bg-orange-500' },
@@ -40,102 +40,87 @@ export const VisualPipeline: React.FC<VisualPipelineProps> = ({ events }) => {
     const theme = colors[color] || colors.blue;
 
     return (
-      <div className={`relative flex flex-col items-center justify-center p-4 rounded-xl border-2 w-32 h-32 bg-white transition-all duration-300 ${isActive ? `${theme.border} shadow-lg ${theme.shadow} scale-105` : 'border-slate-200 opacity-80'}`}>
-        <div className={`p-3 rounded-full mb-2 ${isActive ? `${theme.iconBg} ${theme.iconText}` : 'bg-slate-100 text-slate-400'}`}>
-          <Icon className="w-8 h-8" />
+      <div 
+        className="absolute flex flex-col items-center justify-center transform -translate-x-1/2 -translate-y-1/2 z-10"
+        style={{ left, top }}
+      >
+        <div className={`relative flex flex-col items-center justify-center p-4 rounded-xl border-2 w-28 h-28 bg-white transition-all duration-300 ${isActive ? `${theme.border} shadow-lg ${theme.shadow} scale-105` : 'border-slate-200 opacity-80'}`}>
+          <div className={`p-3 rounded-full mb-2 ${isActive ? `${theme.iconBg} ${theme.iconText}` : 'bg-slate-100 text-slate-400'}`}>
+            <Icon className="w-8 h-8" />
+          </div>
+          <span className="font-bold text-slate-700 text-sm tracking-tight whitespace-nowrap">{title}</span>
+          <AnimatePresence>
+            {count > 0 && (
+              <motion.div
+                initial={{ scale: 0 }}
+                animate={{ scale: 1 }}
+                exit={{ scale: 0 }}
+                className={`absolute -top-3 -right-3 w-8 h-8 rounded-full flex items-center justify-center font-bold text-white shadow-md ${theme.badge}`}
+              >
+                {count}
+              </motion.div>
+            )}
+          </AnimatePresence>
         </div>
-        <span className="font-bold text-slate-700 text-sm tracking-tight">{title}</span>
-        <AnimatePresence>
-          {count > 0 && (
-            <motion.div
-              initial={{ scale: 0 }}
-              animate={{ scale: 1 }}
-              exit={{ scale: 0 }}
-              className={`absolute -top-3 -right-3 w-8 h-8 rounded-full flex items-center justify-center font-bold text-white shadow-md ${theme.badge}`}
-            >
-              {count}
-            </motion.div>
-          )}
-        </AnimatePresence>
+        {subtitle && <span className="mt-2 text-xs font-semibold text-slate-400">{subtitle}</span>}
       </div>
     );
   };
 
   return (
-    <div className="flex-1 flex flex-col items-center justify-center w-full h-full p-8 relative">
+    <div className="flex-1 flex items-center justify-center w-full h-full p-8 relative overflow-hidden bg-slate-50/50">
       
-      {/* Background connecting lines */}
-      <svg className="absolute inset-0 w-full h-full pointer-events-none" style={{ zIndex: 0 }}>
-        {/* API to Rabbit */}
-        <line x1="30%" y1="50%" x2="50%" y2="50%" stroke="#e2e8f0" strokeWidth="4" strokeDasharray="8 8" />
-        {/* Rabbit to Consumer */}
-        <line x1="50%" y1="50%" x2="70%" y2="50%" stroke="#e2e8f0" strokeWidth="4" strokeDasharray="8 8" />
-        {/* Consumer to Success */}
-        <path d="M 70% 50% Q 85% 50% 85% 30%" fill="none" stroke="#e2e8f0" strokeWidth="4" strokeDasharray="8 8" />
-        {/* Consumer to DLQ */}
-        <path d="M 70% 50% Q 85% 50% 85% 70%" fill="none" stroke="#e2e8f0" strokeWidth="4" strokeDasharray="8 8" />
-      </svg>
-
-      <div className="relative z-10 w-full h-full max-w-5xl flex items-center justify-between">
+      {/* Container for absolute positioning */}
+      <div className="relative w-full h-[400px] max-w-4xl">
         
-        {/* 1. API Gateway */}
-        <div className="flex flex-col items-center" style={{ width: '20%' }}>
-          <Node title="API REST" icon={Server} count={counts.API} isActive={counts.API > 0} color="blue" />
-        </div>
-
-        {/* 2. RabbitMQ */}
-        <div className="flex flex-col items-center" style={{ width: '20%' }}>
-          <Node title="RabbitMQ" icon={Layers} count={counts.RABBIT} isActive={counts.RABBIT > 0} color="orange" />
-          <span className="mt-2 text-xs font-semibold text-slate-400">notification.queue</span>
-        </div>
-
-        {/* 3. Consumer / Strategy */}
-        <div className="flex flex-col items-center" style={{ width: '20%' }}>
-          <Node title="Consumer" icon={Zap} count={counts.CONSUMER} isActive={counts.CONSUMER > 0} color="purple" />
-          <span className="mt-2 text-xs font-semibold text-slate-400">@Retryable</span>
-        </div>
-
-        {/* 4. Outcomes (Success vs DLQ) */}
-        <div className="flex flex-col justify-between h-full py-10" style={{ width: '20%' }}>
+        {/* Background connecting lines */}
+        <svg className="absolute inset-0 w-full h-full pointer-events-none" style={{ zIndex: 0 }}>
+          {/* API to Rabbit */}
+          <line x1="15%" y1="50%" x2="40%" y2="50%" stroke="#cbd5e1" strokeWidth="3" strokeDasharray="6 6" />
+          {/* Rabbit to Consumer */}
+          <line x1="40%" y1="50%" x2="65%" y2="50%" stroke="#cbd5e1" strokeWidth="3" strokeDasharray="6 6" />
+          {/* Consumer to Success (Elbow L-curve built with 3 lines) */}
+          <line x1="65%" y1="50%" x2="75%" y2="50%" stroke="#cbd5e1" strokeWidth="3" strokeDasharray="6 6" />
+          <line x1="75%" y1="50%" x2="75%" y2="25%" stroke="#cbd5e1" strokeWidth="3" strokeDasharray="6 6" />
+          <line x1="75%" y1="25%" x2="90%" y2="25%" stroke="#cbd5e1" strokeWidth="3" strokeDasharray="6 6" />
           
-          <div className="flex flex-col items-center">
-            <Node title="Delivered" icon={CheckCircle} count={counts.SUCCESS} isActive={counts.SUCCESS > 0} color="green" />
-            <span className="mt-2 text-xs font-semibold text-slate-400">AWS SES/SNS</span>
-          </div>
+          {/* Consumer to DLQ (Elbow L-curve built with 2 lines sharing the first horizontal segment) */}
+          <line x1="75%" y1="50%" x2="75%" y2="75%" stroke="#cbd5e1" strokeWidth="3" strokeDasharray="6 6" />
+          <line x1="75%" y1="75%" x2="90%" y2="75%" stroke="#cbd5e1" strokeWidth="3" strokeDasharray="6 6" />
+        </svg>
 
-          <div className="flex flex-col items-center mt-auto">
-            <Node title="DLQ" icon={AlertTriangle} count={counts.DLQ} isActive={counts.DLQ > 0} color="red" />
-            <span className="mt-2 text-xs font-semibold text-slate-400">Dead Letter</span>
-          </div>
+        {/* The 5 Nodes placed precisely over the SVG lines */}
+        <Node title="API REST" icon={Server} count={counts.API} isActive={counts.API > 0} color="blue" left="15%" top="50%" />
+        <Node title="RabbitMQ" icon={Layers} count={counts.RABBIT} isActive={counts.RABBIT > 0} color="orange" left="40%" top="50%" subtitle="notification.queue" />
+        <Node title="Consumer" icon={Zap} count={counts.CONSUMER} isActive={counts.CONSUMER > 0} color="purple" left="65%" top="50%" subtitle="@Retryable" />
+        <Node title="Delivered" icon={CheckCircle} count={counts.SUCCESS} isActive={counts.SUCCESS > 0} color="green" left="90%" top="25%" subtitle="AWS SES/SNS" />
+        <Node title="DLQ" icon={AlertTriangle} count={counts.DLQ} isActive={counts.DLQ > 0} color="red" left="90%" top="75%" subtitle="Dead Letter" />
 
-        </div>
+        {/* Floating particles (animated dots representing messages) */}
+        {activeMessages.map(msg => {
+          // Exact coordinates matching the Nodes
+          let position = { left: '15%', top: '50%' };
+          let color = 'bg-blue-500';
+          
+          if (msg.eventType === 'QUEUED') { position = { left: '40%', top: '50%' }; color = 'bg-orange-500'; }
+          if (msg.eventType === 'PROCESSING') { position = { left: '65%', top: '50%' }; color = 'bg-purple-500'; }
+          if (msg.eventType === 'RETRYING') { position = { left: '65%', top: '50%' }; color = 'bg-yellow-500'; }
+          if (msg.eventType === 'SENT') { position = { left: '90%', top: '25%' }; color = 'bg-green-500'; }
+          if (msg.eventType === 'DLQ') { position = { left: '90%', top: '75%' }; color = 'bg-red-500'; }
 
+          return (
+            <motion.div
+              key={msg.logId}
+              layout
+              initial={{ opacity: 0, scale: 0 }}
+              animate={{ opacity: 1, scale: 1, left: position.left, top: position.top }}
+              transition={{ type: 'tween', ease: 'easeInOut', duration: 1.0 }}
+              className={`absolute w-5 h-5 rounded-full shadow-md ${color} z-20`}
+              style={{ x: '-50%', y: '-50%' }}
+            />
+          );
+        })}
       </div>
-
-      {/* Floating particles (animated dots representing messages) */}
-      {activeMessages.map(msg => {
-        // Determine position based on status
-        let position = { left: '30%', top: '50%' };
-        let color = 'bg-blue-400';
-        
-        if (msg.status === 'QUEUED') { position = { left: '50%', top: '50%' }; color = 'bg-orange-400'; }
-        if (msg.status === 'PROCESSING') { position = { left: '70%', top: '50%' }; color = 'bg-purple-400'; }
-        if (msg.status === 'RETRYING') { position = { left: '70%', top: '50%' }; color = 'bg-yellow-400'; }
-        if (msg.status === 'SENT') { position = { left: '85%', top: '25%' }; color = 'bg-green-400'; }
-        if (msg.status === 'DLQ') { position = { left: '85%', top: '75%' }; color = 'bg-red-400'; }
-
-        return (
-          <motion.div
-            key={msg.logId}
-            layout
-            initial={{ opacity: 0, scale: 0 }}
-            animate={{ opacity: 1, scale: 1, left: position.left, top: position.top }}
-            transition={{ type: 'spring', stiffness: 100, damping: 15 }}
-            className={`absolute w-3 h-3 rounded-full shadow-lg ${color} z-20 -ml-1.5 -mt-1.5`}
-            style={{ left: position.left, top: position.top }}
-          />
-        );
-      })}
 
     </div>
   );

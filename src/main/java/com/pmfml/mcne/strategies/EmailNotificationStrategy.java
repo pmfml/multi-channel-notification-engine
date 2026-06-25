@@ -50,9 +50,15 @@ public class EmailNotificationStrategy implements NotificationStrategy {
       boolean isVisualizer = request.metadata() != null && "true".equalsIgnoreCase(request.metadata().get("isVisualizerClient"));
       boolean simulateError = request.metadata() != null && "true".equalsIgnoreCase(request.metadata().get("simulateError"));
 
-      if (isVisualizer && simulateError) {
-        log.warn("Simulating AWS Error for EMAIL strategy");
-        throw SdkClientException.builder().message("Simulated AWS SES Error").build();
+      if (isVisualizer) {
+        if (simulateError) {
+          log.warn("Simulating AWS Error for EMAIL strategy");
+          throw SdkClientException.builder().message("Simulated AWS SES Error").build();
+        } else {
+          log.info("Simulating successful EMAIL delivery via AWS SES for Visualizer!");
+          wsPublisher.publish(new WebSocketNotificationEvent(logId, "SENT", "EMAIL", request.message()));
+          return;
+        }
       }
 
       SendEmailRequest emailRequest = SendEmailRequest.builder()

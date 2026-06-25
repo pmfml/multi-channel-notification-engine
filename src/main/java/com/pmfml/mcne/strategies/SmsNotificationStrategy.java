@@ -44,9 +44,15 @@ public class SmsNotificationStrategy implements NotificationStrategy {
       boolean isVisualizer = request.metadata() != null && "true".equalsIgnoreCase(request.metadata().get("isVisualizerClient"));
       boolean simulateError = request.metadata() != null && "true".equalsIgnoreCase(request.metadata().get("simulateError"));
 
-      if (isVisualizer && simulateError) {
-        log.warn("Simulating AWS Error for SMS strategy");
-        throw SdkClientException.builder().message("Simulated AWS SNS Error").build();
+      if (isVisualizer) {
+        if (simulateError) {
+          log.warn("Simulating AWS Error for SMS strategy");
+          throw SdkClientException.builder().message("Simulated AWS SNS Error").build();
+        } else {
+          log.info("Simulating successful SMS delivery via AWS SNS for Visualizer!");
+          wsPublisher.publish(new WebSocketNotificationEvent(logId, "SENT", "SMS", request.message()));
+          return;
+        }
       }
 
       PublishRequest publishRequest = PublishRequest.builder()

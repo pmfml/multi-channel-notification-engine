@@ -51,8 +51,30 @@ public class NotificationDispatcherService {
     }
 
     NotificationLog logEntry = notificationLogService.savePendingLog(request);
+
+    // 1. Emit RECEIVED (API REST Box)
+    wsPublisher.publish(new WebSocketNotificationEvent(
+        logEntry.getId(), 
+        "RECEIVED", 
+        request.channel().name(), 
+        request.message()
+    ));
+
+    // Delay at API REST
+    if (request.metadata() != null && request.metadata().containsKey("demoDelayMs")) {
+      boolean isVisualizer = "true".equalsIgnoreCase(request.metadata().get("isVisualizerClient"));
+      if (isVisualizer) {
+        try {
+          long delay = Long.parseLong(request.metadata().get("demoDelayMs"));
+          if (delay > 0) Thread.sleep(delay);
+        } catch (Exception e) { Thread.currentThread().interrupt(); }
+      }
+    }
+
+    // 2. Publish to RabbitMQ
     producer.publish(new NotificationEvent(logEntry.getId(), request));
     
+    // 3. Emit QUEUED (RabbitMQ Box)
     wsPublisher.publish(new WebSocketNotificationEvent(
         logEntry.getId(), 
         "QUEUED", 

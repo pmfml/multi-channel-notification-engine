@@ -1,5 +1,6 @@
 import React from 'react';
-import { Send, Zap, Layers } from 'lucide-react';
+import { Layers } from 'lucide-react';
+import { MessageControls } from '../MessageControls';
 
 export const Sidebar: React.FC = () => {
   return (
@@ -17,22 +18,9 @@ export const Sidebar: React.FC = () => {
         </div>
       </div>
 
-      {/* Controls Placeholder */}
-      <div className="p-6 flex-1 overflow-y-auto">
-        <h2 className="text-sm font-semibold text-slate-400 uppercase tracking-wider mb-4">Message Controls</h2>
-        
-        <div className="space-y-4">
-          <div className="p-4 border border-dashed border-slate-300 rounded-lg bg-slate-50 text-slate-500 text-sm text-center">
-            (Formulário de Envio Único virá aqui no Step 8)
-          </div>
-        </div>
-
-        <h2 className="text-sm font-semibold text-slate-400 uppercase tracking-wider mt-8 mb-4">Batch Simulation</h2>
-        <div className="space-y-4">
-          <div className="p-4 border border-dashed border-slate-300 rounded-lg bg-slate-50 text-slate-500 text-sm text-center">
-            (Controles de Concorrência virão aqui no Step 8)
-          </div>
-        </div>
+      {/* Controls Area */}
+      <div className="p-6 flex-1 overflow-y-auto custom-scrollbar">
+        <MessageControls />
       </div>
       
       {/* Footer / Status */}
