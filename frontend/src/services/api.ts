@@ -34,5 +34,15 @@ export const mcneApi = {
     }
     
     return response.json();
+  },
+
+  setConcurrency: async (count: number) => {
+    const response = await fetch(`http://localhost:8081/api/v1/config/concurrency?count=${count}`, {
+      method: 'PUT',
+      headers: {
+        'X-MCNE-Client': 'Visualizer'
+      }
+    });
+    return response.ok;
   }
 };

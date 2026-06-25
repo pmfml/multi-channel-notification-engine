@@ -29,7 +29,7 @@ public class NotificationConsumer {
    * @param event the deserialized notification event payload containing the log
    *              ID
    */
-  @RabbitListener(queues = RabbitMQConfig.NOTIFICATION_QUEUE)
+  @RabbitListener(id = "notificationConsumer", queues = RabbitMQConfig.NOTIFICATION_QUEUE)
   public void consume(NotificationEvent event) {
     log.info("Message received for log ID: {}", event.logId());
     
