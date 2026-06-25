@@ -1,7 +1,7 @@
 import React, { useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { WebSocketNotificationEvent } from '../services/websocket';
-import { Server, Send, Mail, AlertTriangle, Layers, Zap, Smartphone, CheckCircle2 } from 'lucide-react';
+import type { WebSocketNotificationEvent } from '../services/websocket';
+import { Server, Send, Mail, AlertTriangle, Layers, Zap, Smartphone, CheckCircle } from 'lucide-react';
 
 interface VisualPipelineProps {
   events: WebSocketNotificationEvent[];
@@ -28,26 +28,38 @@ export const VisualPipeline: React.FC<VisualPipelineProps> = ({ events }) => {
     };
   }, [activeMessages]);
 
-  const Node = ({ title, icon: Icon, count, isActive, colorClass }: any) => (
-    <div className={`relative flex flex-col items-center justify-center p-4 rounded-xl border-2 w-32 h-32 bg-white transition-all duration-300 ${isActive ? `border-${colorClass}-500 shadow-lg shadow-${colorClass}-100 scale-105` : 'border-slate-200 opacity-80'}`}>
-      <div className={`p-3 rounded-full mb-2 ${isActive ? `bg-${colorClass}-100 text-${colorClass}-600` : 'bg-slate-100 text-slate-400'}`}>
-        <Icon className="w-8 h-8" />
+  const Node = ({ title, icon: Icon, count, isActive, color }: any) => {
+    const colors: Record<string, { border: string, iconBg: string, iconText: string, shadow: string, badge: string }> = {
+      blue: { border: 'border-blue-500', iconBg: 'bg-blue-100', iconText: 'text-blue-600', shadow: 'shadow-blue-100', badge: 'bg-blue-500' },
+      orange: { border: 'border-orange-500', iconBg: 'bg-orange-100', iconText: 'text-orange-600', shadow: 'shadow-orange-100', badge: 'bg-orange-500' },
+      purple: { border: 'border-purple-500', iconBg: 'bg-purple-100', iconText: 'text-purple-600', shadow: 'shadow-purple-100', badge: 'bg-purple-500' },
+      green: { border: 'border-green-500', iconBg: 'bg-green-100', iconText: 'text-green-600', shadow: 'shadow-green-100', badge: 'bg-green-500' },
+      red: { border: 'border-red-500', iconBg: 'bg-red-100', iconText: 'text-red-600', shadow: 'shadow-red-100', badge: 'bg-red-500' },
+    };
+    
+    const theme = colors[color] || colors.blue;
+
+    return (
+      <div className={`relative flex flex-col items-center justify-center p-4 rounded-xl border-2 w-32 h-32 bg-white transition-all duration-300 ${isActive ? `${theme.border} shadow-lg ${theme.shadow} scale-105` : 'border-slate-200 opacity-80'}`}>
+        <div className={`p-3 rounded-full mb-2 ${isActive ? `${theme.iconBg} ${theme.iconText}` : 'bg-slate-100 text-slate-400'}`}>
+          <Icon className="w-8 h-8" />
+        </div>
+        <span className="font-bold text-slate-700 text-sm tracking-tight">{title}</span>
+        <AnimatePresence>
+          {count > 0 && (
+            <motion.div
+              initial={{ scale: 0 }}
+              animate={{ scale: 1 }}
+              exit={{ scale: 0 }}
+              className={`absolute -top-3 -right-3 w-8 h-8 rounded-full flex items-center justify-center font-bold text-white shadow-md ${theme.badge}`}
+            >
+              {count}
+            </motion.div>
+          )}
+        </AnimatePresence>
       </div>
-      <span className="font-bold text-slate-700 text-sm tracking-tight">{title}</span>
-      <AnimatePresence>
-        {count > 0 && (
-          <motion.div
-            initial={{ scale: 0 }}
-            animate={{ scale: 1 }}
-            exit={{ scale: 0 }}
-            className={`absolute -top-3 -right-3 w-8 h-8 rounded-full flex items-center justify-center font-bold text-white shadow-md bg-${colorClass}-500`}
-          >
-            {count}
-          </motion.div>
-        )}
-      </AnimatePresence>
-    </div>
-  );
+    );
+  };
 
   return (
     <div className="flex-1 flex flex-col items-center justify-center w-full h-full p-8 relative">
@@ -68,18 +80,18 @@ export const VisualPipeline: React.FC<VisualPipelineProps> = ({ events }) => {
         
         {/* 1. API Gateway */}
         <div className="flex flex-col items-center" style={{ width: '20%' }}>
-          <Node title="API REST" icon={Server} count={counts.API} isActive={counts.API > 0} colorClass="blue" />
+          <Node title="API REST" icon={Server} count={counts.API} isActive={counts.API > 0} color="blue" />
         </div>
 
         {/* 2. RabbitMQ */}
         <div className="flex flex-col items-center" style={{ width: '20%' }}>
-          <Node title="RabbitMQ" icon={Layers} count={counts.RABBIT} isActive={counts.RABBIT > 0} colorClass="orange" />
+          <Node title="RabbitMQ" icon={Layers} count={counts.RABBIT} isActive={counts.RABBIT > 0} color="orange" />
           <span className="mt-2 text-xs font-semibold text-slate-400">notification.queue</span>
         </div>
 
         {/* 3. Consumer / Strategy */}
         <div className="flex flex-col items-center" style={{ width: '20%' }}>
-          <Node title="Consumer" icon={Zap} count={counts.CONSUMER} isActive={counts.CONSUMER > 0} colorClass="purple" />
+          <Node title="Consumer" icon={Zap} count={counts.CONSUMER} isActive={counts.CONSUMER > 0} color="purple" />
           <span className="mt-2 text-xs font-semibold text-slate-400">@Retryable</span>
         </div>
 
@@ -87,12 +99,12 @@ export const VisualPipeline: React.FC<VisualPipelineProps> = ({ events }) => {
         <div className="flex flex-col justify-between h-full py-10" style={{ width: '20%' }}>
           
           <div className="flex flex-col items-center">
-            <Node title="Delivered" icon={CheckCircle2} count={counts.SUCCESS} isActive={counts.SUCCESS > 0} colorClass="green" />
+            <Node title="Delivered" icon={CheckCircle} count={counts.SUCCESS} isActive={counts.SUCCESS > 0} color="green" />
             <span className="mt-2 text-xs font-semibold text-slate-400">AWS SES/SNS</span>
           </div>
 
           <div className="flex flex-col items-center mt-auto">
-            <Node title="DLQ" icon={AlertTriangle} count={counts.DLQ} isActive={counts.DLQ > 0} colorClass="red" />
+            <Node title="DLQ" icon={AlertTriangle} count={counts.DLQ} isActive={counts.DLQ > 0} color="red" />
             <span className="mt-2 text-xs font-semibold text-slate-400">Dead Letter</span>
           </div>
 

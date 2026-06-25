@@ -1,5 +1,5 @@
 import React, { useEffect, useRef } from 'react';
-import { WebSocketNotificationEvent } from '../services/websocket';
+import type { WebSocketNotificationEvent } from '../services/websocket';
 import { Terminal, Clock, Activity, CheckCircle2, XCircle, AlertTriangle } from 'lucide-react';
 
 interface TerminalLogProps {

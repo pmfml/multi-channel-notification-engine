@@ -2,7 +2,8 @@ import { useEffect, useState } from 'react'
 import { MainLayout } from './components/layout/MainLayout'
 import { TerminalLog } from './components/TerminalLog'
 import { VisualPipeline } from './components/VisualPipeline'
-import { wsService, WebSocketNotificationEvent } from './services/websocket'
+import { wsService } from './services/websocket'
+import type { WebSocketNotificationEvent } from './services/websocket'
 
 function App() {
   const [events, setEvents] = useState<WebSocketNotificationEvent[]>([])
