@@ -3,6 +3,7 @@ package com.pmfml.mcne.services;
 import java.util.UUID;
 
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import com.pmfml.mcne.dtos.NotificationRequest;
 import com.pmfml.mcne.entities.NotificationLog;
@@ -25,6 +26,7 @@ public class NotificationLogService {
    * @param request the notification request containing delivery details
    * @return the persisted NotificationLog entity
    */
+  @Transactional
   public NotificationLog savePendingLog(NotificationRequest request) {
     NotificationLog notificationLog = NotificationLog.builder()
         .recipient(request.recipient())
@@ -43,6 +45,7 @@ public class NotificationLogService {
    * @param status the new status to apply
    * @throws ResourceNotFoundException if no log exists for the given ID
    */
+  @Transactional
   public void updateStatus(UUID logId, NotificationStatus status) {
     NotificationLog log = repository.findById(logId)
         .orElseThrow(() -> new ResourceNotFoundException(
@@ -51,4 +54,3 @@ public class NotificationLogService {
     repository.save(log);
   }
 }
-

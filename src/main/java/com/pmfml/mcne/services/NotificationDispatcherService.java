@@ -4,6 +4,7 @@ import com.pmfml.mcne.dtos.NotificationEvent;
 import com.pmfml.mcne.dtos.NotificationRequest;
 import com.pmfml.mcne.dtos.WebSocketNotificationEvent;
 import com.pmfml.mcne.entities.NotificationLog;
+import com.pmfml.mcne.enums.NotificationEventType;
 import com.pmfml.mcne.enums.NotificationStatus;
 import com.pmfml.mcne.producers.NotificationProducer;
 import com.pmfml.mcne.strategies.NotificationStrategy;
@@ -57,26 +58,17 @@ public class NotificationDispatcherService {
 
     // 1. Emit RECEIVED (API REST Box)
     wsPublisher.publish(new WebSocketNotificationEvent(
-        logEntry.getId(),
-        "RECEIVED",
-        request.channel().name(),
-        null
+        logEntry.getId(), NotificationEventType.RECEIVED, request.channel().name()
     ));
 
-    // Demo mode: artificial delay so the Visualizer can show the API node lit up
     if (demoMode) {
       applyDemoDelay(request);
     }
 
-    // 2. Publish to RabbitMQ
     producer.publish(new NotificationEvent(logEntry.getId(), request));
 
-    // 3. Emit QUEUED (RabbitMQ Box)
     wsPublisher.publish(new WebSocketNotificationEvent(
-        logEntry.getId(),
-        "QUEUED",
-        request.channel().name(),
-        null
+        logEntry.getId(), NotificationEventType.QUEUED, request.channel().name()
     ));
   }
 
@@ -107,7 +99,7 @@ public class NotificationDispatcherService {
         log.warn("Could not update log status to FAILED for logId={}: {}", event.logId(), updateEx.getMessage());
       }
       wsPublisher.publish(new WebSocketNotificationEvent(
-          event.logId(), "DLQ", event.request().channel().name(), null
+          event.logId(), NotificationEventType.DLQ, event.request().channel().name()
       ));
       throw new AmqpRejectAndDontRequeueException(
           "Strategy failed after retries for logId=" + event.logId() + ". Routing to DLQ.", e);

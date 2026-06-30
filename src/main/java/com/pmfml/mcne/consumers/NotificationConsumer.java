@@ -7,9 +7,10 @@ import org.springframework.stereotype.Component;
 
 import com.pmfml.mcne.config.RabbitMQConfig;
 import com.pmfml.mcne.dtos.NotificationEvent;
+import com.pmfml.mcne.dtos.WebSocketNotificationEvent;
+import com.pmfml.mcne.enums.NotificationEventType;
 import com.pmfml.mcne.services.NotificationDispatcherService;
 import com.pmfml.mcne.services.WebSocketEventPublisher;
-import com.pmfml.mcne.dtos.WebSocketNotificationEvent;
 
 @Slf4j
 @Component
@@ -41,9 +42,8 @@ public class NotificationConsumer {
 
     wsPublisher.publish(new WebSocketNotificationEvent(
         event.logId(),
-        "PROCESSING",
-        event.request().channel().name(),
-        null
+        NotificationEventType.PROCESSING,
+        event.request().channel().name()
     ));
 
     applyDemoDelay(event);

@@ -1,9 +1,10 @@
 package com.pmfml.mcne.strategies;
 
 import com.pmfml.mcne.dtos.NotificationRequest;
-import com.pmfml.mcne.enums.NotificationChannel;
-import com.pmfml.mcne.services.WebSocketEventPublisher;
 import com.pmfml.mcne.dtos.WebSocketNotificationEvent;
+import com.pmfml.mcne.enums.NotificationChannel;
+import com.pmfml.mcne.enums.NotificationEventType;
+import com.pmfml.mcne.services.WebSocketEventPublisher;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.retry.annotation.Backoff;
@@ -16,6 +17,8 @@ import software.amazon.awssdk.services.ses.model.Content;
 import software.amazon.awssdk.services.ses.model.Destination;
 import software.amazon.awssdk.services.ses.model.Message;
 import software.amazon.awssdk.services.ses.model.SendEmailRequest;
+
+import java.util.UUID;
 
 /**
  * Strategy implementation for sending email notifications.
@@ -50,7 +53,7 @@ public class EmailNotificationStrategy implements NotificationStrategy {
 
   @Retryable(retryFor = SdkClientException.class, maxAttempts = 3, backoff = @Backoff(delay = 2000, multiplier = 2.0))
   @Override
-  public void send(java.util.UUID logId, NotificationRequest request) {
+  public void send(UUID logId, NotificationRequest request) {
     log.info("Sending EMAIL to: {}", request.recipient());
 
     try {
@@ -62,7 +65,7 @@ public class EmailNotificationStrategy implements NotificationStrategy {
           throw SdkClientException.builder().message("Simulated AWS SES Error").build();
         }
         log.info("Demo mode: simulating successful EMAIL delivery");
-        wsPublisher.publish(new WebSocketNotificationEvent(logId, "SENT", "EMAIL", null));
+        wsPublisher.publish(new WebSocketNotificationEvent(logId, NotificationEventType.SENT, NotificationChannel.EMAIL.name()));
         return;
       }
 
@@ -77,9 +80,9 @@ public class EmailNotificationStrategy implements NotificationStrategy {
 
       sesClient.sendEmail(emailRequest);
       log.info("EMAIL successfully sent via AWS SES to: {}", request.recipient());
-      wsPublisher.publish(new WebSocketNotificationEvent(logId, "SENT", "EMAIL", null));
+      wsPublisher.publish(new WebSocketNotificationEvent(logId, NotificationEventType.SENT, NotificationChannel.EMAIL.name()));
     } catch (SdkClientException e) {
-      wsPublisher.publish(new WebSocketNotificationEvent(logId, "RETRYING", "EMAIL", null));
+      wsPublisher.publish(new WebSocketNotificationEvent(logId, NotificationEventType.RETRYING, NotificationChannel.EMAIL.name()));
       throw e;
     }
   }

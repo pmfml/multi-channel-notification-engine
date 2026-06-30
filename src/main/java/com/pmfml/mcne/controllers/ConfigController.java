@@ -10,42 +10,50 @@ import org.springframework.web.bind.annotation.RestController;
 
 import java.util.Map;
 
+/**
+ * REST Controller for runtime infrastructure configuration.
+ *
+ * <p>Requires authentication via {@code X-API-Key} header (enforced by {@code SecurityConfig}).
+ */
 @RestController
 @RequestMapping("/api/v1/config")
 public class ConfigController {
 
-    private final RabbitListenerEndpointRegistry registry;
+  private static final String CONSUMER_ID = "notificationConsumer";
 
-    public ConfigController(RabbitListenerEndpointRegistry registry) {
-        this.registry = registry;
+  private final RabbitListenerEndpointRegistry registry;
+
+  public ConfigController(RabbitListenerEndpointRegistry registry) {
+    this.registry = registry;
+  }
+
+  /**
+   * Dynamically sets the concurrency level of the main notification consumer.
+   * If count is 0, the consumer is stopped (simulating a crash or pause).
+   * If count > 0, the consumer is started (if stopped) and scaled to {count} threads.
+   *
+   * @param count the number of concurrent consumers (0-10)
+   * @return success message
+   */
+  @PutMapping("/concurrency")
+  public ResponseEntity<Map<String, String>> setConcurrency(@RequestParam int count) {
+    SimpleMessageListenerContainer container =
+        (SimpleMessageListenerContainer) registry.getListenerContainer(CONSUMER_ID);
+
+    if (container == null) {
+      return ResponseEntity.internalServerError()
+          .body(Map.of("message", "Listener container '" + CONSUMER_ID + "' not found."));
     }
 
-    /**
-     * Dynamically sets the concurrency level of the main notification consumer.
-     * If count is 0, the consumer is stopped (simulating a crash or pause).
-     * If count > 0, the consumer is started (if stopped) and scaled to {count} threads.
-     * 
-     * @param count the number of concurrent consumers (0-10)
-     * @return success message
-     */
-    @PutMapping("/concurrency")
-    public ResponseEntity<Map<String, String>> setConcurrency(@RequestParam int count) {
-        SimpleMessageListenerContainer container = 
-            (SimpleMessageListenerContainer) registry.getListenerContainer("notificationConsumer");
-
-        if (container != null) {
-            if (count <= 0) {
-                container.stop();
-            } else {
-                if (!container.isRunning()) {
-                    container.start();
-                }
-                container.setConcurrentConsumers(count);
-                container.setMaxConcurrentConsumers(count);
-            }
-            return ResponseEntity.ok(Map.of("message", "Concurrency updated to " + count));
-        }
-        
-        return ResponseEntity.notFound().build();
+    if (count <= 0) {
+      container.stop();
+    } else {
+      if (!container.isRunning()) {
+        container.start();
+      }
+      container.setConcurrentConsumers(count);
+      container.setMaxConcurrentConsumers(count);
     }
+    return ResponseEntity.ok(Map.of("message", "Concurrency updated to " + count));
+  }
 }

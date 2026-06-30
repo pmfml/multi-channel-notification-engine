@@ -1,9 +1,10 @@
 package com.pmfml.mcne.strategies;
 
 import com.pmfml.mcne.dtos.NotificationRequest;
-import com.pmfml.mcne.enums.NotificationChannel;
-import com.pmfml.mcne.services.WebSocketEventPublisher;
 import com.pmfml.mcne.dtos.WebSocketNotificationEvent;
+import com.pmfml.mcne.enums.NotificationChannel;
+import com.pmfml.mcne.enums.NotificationEventType;
+import com.pmfml.mcne.services.WebSocketEventPublisher;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.retry.annotation.Backoff;
@@ -13,10 +14,11 @@ import software.amazon.awssdk.core.exception.SdkClientException;
 import software.amazon.awssdk.services.sns.SnsClient;
 import software.amazon.awssdk.services.sns.model.PublishRequest;
 
+import java.util.UUID;
+
 /**
  * Strategy implementation for sending SMS notifications.
- * Integrates with AWS Simple Notification Service (SNS) to dispatch text
- * messages.
+ * Integrates with AWS Simple Notification Service (SNS) to dispatch text messages.
  *
  * <p>Demo behaviour (artificial delays and simulated errors) is only active
  * when the {@code demo} Spring profile is enabled.
@@ -43,7 +45,7 @@ public class SmsNotificationStrategy implements NotificationStrategy {
 
   @Retryable(retryFor = SdkClientException.class, maxAttempts = 3, backoff = @Backoff(delay = 2000, multiplier = 2.0))
   @Override
-  public void send(java.util.UUID logId, NotificationRequest request) {
+  public void send(UUID logId, NotificationRequest request) {
     log.info("Sending SMS to: {}", request.recipient());
 
     try {
@@ -55,7 +57,7 @@ public class SmsNotificationStrategy implements NotificationStrategy {
           throw SdkClientException.builder().message("Simulated AWS SNS Error").build();
         }
         log.info("Demo mode: simulating successful SMS delivery");
-        wsPublisher.publish(new WebSocketNotificationEvent(logId, "SENT", "SMS", null));
+        wsPublisher.publish(new WebSocketNotificationEvent(logId, NotificationEventType.SENT, NotificationChannel.SMS.name()));
         return;
       }
 
@@ -66,9 +68,9 @@ public class SmsNotificationStrategy implements NotificationStrategy {
 
       snsClient.publish(publishRequest);
       log.info("SMS successfully sent via AWS SNS to: {}", request.recipient());
-      wsPublisher.publish(new WebSocketNotificationEvent(logId, "SENT", "SMS", null));
+      wsPublisher.publish(new WebSocketNotificationEvent(logId, NotificationEventType.SENT, NotificationChannel.SMS.name()));
     } catch (SdkClientException e) {
-      wsPublisher.publish(new WebSocketNotificationEvent(logId, "RETRYING", "SMS", null));
+      wsPublisher.publish(new WebSocketNotificationEvent(logId, NotificationEventType.RETRYING, NotificationChannel.SMS.name()));
       throw e;
     }
   }
