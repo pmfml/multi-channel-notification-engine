@@ -8,6 +8,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.autoconfigure.security.servlet.SecurityAutoConfiguration;
+import org.springframework.boot.autoconfigure.security.servlet.UserDetailsServiceAutoConfiguration;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.http.MediaType;
@@ -17,7 +19,11 @@ import com.pmfml.mcne.dtos.NotificationRequest;
 import com.pmfml.mcne.services.NotificationDispatcherService;
 import com.pmfml.mcne.services.NotificationDlqService;
 
-@WebMvcTest(NotificationController.class)
+// Security auto-configuration is excluded here because @WebMvcTest is a controller
+// slice test focused on MVC behaviour (validation, routing, serialization).
+// API key authentication is covered in NotificationControllerSecurityTest.
+@WebMvcTest(controllers = NotificationController.class,
+    excludeAutoConfiguration = {SecurityAutoConfiguration.class, UserDetailsServiceAutoConfiguration.class})
 class NotificationControllerTest {
 
   @Autowired
@@ -28,6 +34,11 @@ class NotificationControllerTest {
 
   @MockBean
   private NotificationDlqService dlqService;
+
+  // Helper to perform a POST — no security in this slice test
+  private org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder postWithKey(String url) {
+    return post(url);
+  }
 
   @Test
   @DisplayName("Should return 202 Accepted when a valid EMAIL notification request is received")
@@ -41,7 +52,7 @@ class NotificationControllerTest {
         }
         """;
 
-    mockMvc.perform(post("/api/v1/notifications")
+    mockMvc.perform(postWithKey("/api/v1/notifications")
         .contentType(MediaType.APPLICATION_JSON)
         .content(requestBody))
         .andExpect(status().isAccepted());
@@ -61,7 +72,7 @@ class NotificationControllerTest {
         }
         """;
 
-    mockMvc.perform(post("/api/v1/notifications")
+    mockMvc.perform(postWithKey("/api/v1/notifications")
         .contentType(MediaType.APPLICATION_JSON)
         .content(requestBody))
         .andExpect(status().isAccepted());
@@ -79,7 +90,7 @@ class NotificationControllerTest {
         }
         """;
 
-    mockMvc.perform(post("/api/v1/notifications")
+    mockMvc.perform(postWithKey("/api/v1/notifications")
         .contentType(MediaType.APPLICATION_JSON)
         .content(requestBody))
         .andExpect(status().isBadRequest())
@@ -98,7 +109,7 @@ class NotificationControllerTest {
         }
         """;
 
-    mockMvc.perform(post("/api/v1/notifications")
+    mockMvc.perform(postWithKey("/api/v1/notifications")
         .contentType(MediaType.APPLICATION_JSON)
         .content(requestBody))
         .andExpect(status().isBadRequest())
@@ -116,7 +127,7 @@ class NotificationControllerTest {
         }
         """;
 
-    mockMvc.perform(post("/api/v1/notifications")
+    mockMvc.perform(postWithKey("/api/v1/notifications")
         .contentType(MediaType.APPLICATION_JSON)
         .content(requestBody))
         .andExpect(status().isBadRequest())
@@ -138,7 +149,7 @@ class NotificationControllerTest {
         }
         """;
 
-    mockMvc.perform(post("/api/v1/notifications")
+    mockMvc.perform(postWithKey("/api/v1/notifications")
         .contentType(MediaType.APPLICATION_JSON)
         .content(requestBody))
         .andExpect(status().isBadRequest())
@@ -150,7 +161,7 @@ class NotificationControllerTest {
   void shouldReturn200AfterDlqReprocess() throws Exception {
     when(dlqService.reprocessMessages()).thenReturn(3);
 
-    mockMvc.perform(post("/api/v1/notifications/dlq/reprocess"))
+    mockMvc.perform(postWithKey("/api/v1/notifications/dlq/reprocess"))
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.message").value("3 messages reprocessed successfully."));
   }
@@ -160,7 +171,7 @@ class NotificationControllerTest {
   void shouldReturn200WithZeroWhenDlqIsEmpty() throws Exception {
     when(dlqService.reprocessMessages()).thenReturn(0);
 
-    mockMvc.perform(post("/api/v1/notifications/dlq/reprocess"))
+    mockMvc.perform(postWithKey("/api/v1/notifications/dlq/reprocess"))
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.message").value("0 messages reprocessed successfully."));
   }

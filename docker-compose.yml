@@ -31,9 +31,12 @@ services:
       - SPRING_RABBITMQ_HOST=rabbitmq
       # AWS Credentials — read from .env file or host OS environment
       - AWS_REGION=${AWS_REGION:-us-east-2}
-      - AWS_ACCESS_KEY=${AWS_ACCESS_KEY}
-      - AWS_SECRET_KEY=${AWS_SECRET_KEY}
-      - AWS_VERIFIED_EMAIL=${AWS_VERIFIED_EMAIL}
+      - AWS_ACCESS_KEY=${AWS_ACCESS_KEY:-}
+      - AWS_SECRET_KEY=${AWS_SECRET_KEY:-}
+      - AWS_VERIFIED_EMAIL=${AWS_VERIFIED_EMAIL:-none@example.com}
+      # Security
+      - MCNE_API_KEY=${MCNE_API_KEY:-dev-only-key}
+      - MCNE_ALLOWED_ORIGINS=${MCNE_ALLOWED_ORIGINS:-http://localhost:5173}
     depends_on:
       - postgres
       - rabbitmq

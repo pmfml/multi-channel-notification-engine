@@ -5,6 +5,7 @@ import com.pmfml.mcne.enums.NotificationChannel;
 import com.pmfml.mcne.services.WebSocketEventPublisher;
 import com.pmfml.mcne.dtos.WebSocketNotificationEvent;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.retry.annotation.Backoff;
 import org.springframework.retry.annotation.Retryable;
 import org.springframework.stereotype.Component;
@@ -16,6 +17,9 @@ import software.amazon.awssdk.services.sns.model.PublishRequest;
  * Strategy implementation for sending SMS notifications.
  * Integrates with AWS Simple Notification Service (SNS) to dispatch text
  * messages.
+ *
+ * <p>Demo behaviour (artificial delays and simulated errors) is only active
+ * when the {@code demo} Spring profile is enabled.
  */
 @Slf4j
 @Component
@@ -23,10 +27,13 @@ public class SmsNotificationStrategy implements NotificationStrategy {
 
   private final SnsClient snsClient;
   private final WebSocketEventPublisher wsPublisher;
+  private final boolean demoMode;
 
-  public SmsNotificationStrategy(SnsClient snsClient, WebSocketEventPublisher wsPublisher) {
+  public SmsNotificationStrategy(SnsClient snsClient, WebSocketEventPublisher wsPublisher,
+      @Value("#{environment.acceptsProfiles('demo')}") boolean demoMode) {
     this.snsClient = snsClient;
     this.wsPublisher = wsPublisher;
+    this.demoMode = demoMode;
   }
 
   @Override
@@ -38,21 +45,18 @@ public class SmsNotificationStrategy implements NotificationStrategy {
   @Override
   public void send(java.util.UUID logId, NotificationRequest request) {
     log.info("Sending SMS to: {}", request.recipient());
-    log.info("Message: {}", request.message());
 
     try {
-      boolean isVisualizer = request.metadata() != null && "true".equalsIgnoreCase(request.metadata().get("isVisualizerClient"));
-      boolean simulateError = request.metadata() != null && "true".equalsIgnoreCase(request.metadata().get("simulateError"));
-
-      if (isVisualizer) {
+      if (demoMode && request.metadata() != null
+          && "true".equalsIgnoreCase(request.metadata().get("isVisualizerClient"))) {
+        boolean simulateError = "true".equalsIgnoreCase(request.metadata().get("simulateError"));
         if (simulateError) {
-          log.warn("Simulating AWS Error for SMS strategy");
+          log.warn("Demo mode: simulating AWS SNS error for SMS");
           throw SdkClientException.builder().message("Simulated AWS SNS Error").build();
-        } else {
-          log.info("Simulating successful SMS delivery via AWS SNS for Visualizer!");
-          wsPublisher.publish(new WebSocketNotificationEvent(logId, "SENT", "SMS", request.message()));
-          return;
         }
+        log.info("Demo mode: simulating successful SMS delivery");
+        wsPublisher.publish(new WebSocketNotificationEvent(logId, "SENT", "SMS", null));
+        return;
       }
 
       PublishRequest publishRequest = PublishRequest.builder()
@@ -61,10 +65,10 @@ public class SmsNotificationStrategy implements NotificationStrategy {
           .build();
 
       snsClient.publish(publishRequest);
-      log.info("SMS successfully sent via AWS SNS!");
-      wsPublisher.publish(new WebSocketNotificationEvent(logId, "SENT", "SMS", request.message()));
+      log.info("SMS successfully sent via AWS SNS to: {}", request.recipient());
+      wsPublisher.publish(new WebSocketNotificationEvent(logId, "SENT", "SMS", null));
     } catch (SdkClientException e) {
-      wsPublisher.publish(new WebSocketNotificationEvent(logId, "RETRYING", "SMS", e.getMessage()));
+      wsPublisher.publish(new WebSocketNotificationEvent(logId, "RETRYING", "SMS", null));
       throw e;
     }
   }

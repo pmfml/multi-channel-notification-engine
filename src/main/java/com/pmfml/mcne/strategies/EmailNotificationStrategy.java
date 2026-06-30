@@ -20,6 +20,9 @@ import software.amazon.awssdk.services.ses.model.SendEmailRequest;
 /**
  * Strategy implementation for sending email notifications.
  * Integrates with AWS Simple Email Service (SES) to dispatch messages.
+ *
+ * <p>Demo behaviour (artificial delays and simulated errors) is only active
+ * when the {@code demo} Spring profile is enabled.
  */
 @Slf4j
 @Component
@@ -28,11 +31,16 @@ public class EmailNotificationStrategy implements NotificationStrategy {
   private final SesClient sesClient;
   private final String senderEmail;
   private final WebSocketEventPublisher wsPublisher;
+  private final boolean demoMode;
 
-  public EmailNotificationStrategy(SesClient sesClient, @Value("${aws.ses.verified-email}") String senderEmail, WebSocketEventPublisher wsPublisher) {
+  public EmailNotificationStrategy(SesClient sesClient,
+      @Value("${aws.ses.verified-email}") String senderEmail,
+      WebSocketEventPublisher wsPublisher,
+      @Value("#{environment.acceptsProfiles('demo')}") boolean demoMode) {
     this.sesClient = sesClient;
     this.senderEmail = senderEmail;
     this.wsPublisher = wsPublisher;
+    this.demoMode = demoMode;
   }
 
   @Override
@@ -44,21 +52,18 @@ public class EmailNotificationStrategy implements NotificationStrategy {
   @Override
   public void send(java.util.UUID logId, NotificationRequest request) {
     log.info("Sending EMAIL to: {}", request.recipient());
-    log.info("Message: {}", request.message());
 
     try {
-      boolean isVisualizer = request.metadata() != null && "true".equalsIgnoreCase(request.metadata().get("isVisualizerClient"));
-      boolean simulateError = request.metadata() != null && "true".equalsIgnoreCase(request.metadata().get("simulateError"));
-
-      if (isVisualizer) {
+      if (demoMode && request.metadata() != null
+          && "true".equalsIgnoreCase(request.metadata().get("isVisualizerClient"))) {
+        boolean simulateError = "true".equalsIgnoreCase(request.metadata().get("simulateError"));
         if (simulateError) {
-          log.warn("Simulating AWS Error for EMAIL strategy");
+          log.warn("Demo mode: simulating AWS SES error for EMAIL");
           throw SdkClientException.builder().message("Simulated AWS SES Error").build();
-        } else {
-          log.info("Simulating successful EMAIL delivery via AWS SES for Visualizer!");
-          wsPublisher.publish(new WebSocketNotificationEvent(logId, "SENT", "EMAIL", request.message()));
-          return;
         }
+        log.info("Demo mode: simulating successful EMAIL delivery");
+        wsPublisher.publish(new WebSocketNotificationEvent(logId, "SENT", "EMAIL", null));
+        return;
       }
 
       SendEmailRequest emailRequest = SendEmailRequest.builder()
@@ -71,10 +76,10 @@ public class EmailNotificationStrategy implements NotificationStrategy {
           .build();
 
       sesClient.sendEmail(emailRequest);
-      log.info("EMAIL successfully sent via AWS SES!");
-      wsPublisher.publish(new WebSocketNotificationEvent(logId, "SENT", "EMAIL", request.message()));
+      log.info("EMAIL successfully sent via AWS SES to: {}", request.recipient());
+      wsPublisher.publish(new WebSocketNotificationEvent(logId, "SENT", "EMAIL", null));
     } catch (SdkClientException e) {
-      wsPublisher.publish(new WebSocketNotificationEvent(logId, "RETRYING", "EMAIL", e.getMessage()));
+      wsPublisher.publish(new WebSocketNotificationEvent(logId, "RETRYING", "EMAIL", null));
       throw e;
     }
   }

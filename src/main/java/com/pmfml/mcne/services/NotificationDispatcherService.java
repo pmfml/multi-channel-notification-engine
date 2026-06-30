@@ -2,14 +2,15 @@ package com.pmfml.mcne.services;
 
 import com.pmfml.mcne.dtos.NotificationEvent;
 import com.pmfml.mcne.dtos.NotificationRequest;
+import com.pmfml.mcne.dtos.WebSocketNotificationEvent;
 import com.pmfml.mcne.entities.NotificationLog;
 import com.pmfml.mcne.enums.NotificationStatus;
 import com.pmfml.mcne.producers.NotificationProducer;
 import com.pmfml.mcne.strategies.NotificationStrategy;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.amqp.AmqpRejectAndDontRequeueException;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
-import com.pmfml.mcne.dtos.WebSocketNotificationEvent;
 
 import java.util.List;
 
@@ -26,15 +27,18 @@ public class NotificationDispatcherService {
   private final NotificationLogService notificationLogService;
   private final NotificationProducer producer;
   private final WebSocketEventPublisher wsPublisher;
+  private final boolean demoMode;
 
   public NotificationDispatcherService(List<NotificationStrategy> strategies,
       NotificationLogService notificationLogService,
       NotificationProducer producer,
-      WebSocketEventPublisher wsPublisher) {
+      WebSocketEventPublisher wsPublisher,
+      @Value("#{environment.acceptsProfiles('demo')}") boolean demoMode) {
     this.strategies = strategies;
     this.notificationLogService = notificationLogService;
     this.producer = producer;
     this.wsPublisher = wsPublisher;
+    this.demoMode = demoMode;
   }
 
   /**
@@ -53,32 +57,26 @@ public class NotificationDispatcherService {
 
     // 1. Emit RECEIVED (API REST Box)
     wsPublisher.publish(new WebSocketNotificationEvent(
-        logEntry.getId(), 
-        "RECEIVED", 
-        request.channel().name(), 
-        request.message()
+        logEntry.getId(),
+        "RECEIVED",
+        request.channel().name(),
+        null
     ));
 
-    // Delay at API REST
-    if (request.metadata() != null && request.metadata().containsKey("demoDelayMs")) {
-      boolean isVisualizer = "true".equalsIgnoreCase(request.metadata().get("isVisualizerClient"));
-      if (isVisualizer) {
-        try {
-          long delay = Long.parseLong(request.metadata().get("demoDelayMs"));
-          if (delay > 0) Thread.sleep(delay);
-        } catch (Exception e) { Thread.currentThread().interrupt(); }
-      }
+    // Demo mode: artificial delay so the Visualizer can show the API node lit up
+    if (demoMode) {
+      applyDemoDelay(request);
     }
 
     // 2. Publish to RabbitMQ
     producer.publish(new NotificationEvent(logEntry.getId(), request));
-    
+
     // 3. Emit QUEUED (RabbitMQ Box)
     wsPublisher.publish(new WebSocketNotificationEvent(
-        logEntry.getId(), 
-        "QUEUED", 
-        request.channel().name(), 
-        request.message()
+        logEntry.getId(),
+        "QUEUED",
+        request.channel().name(),
+        null
     ));
   }
 
@@ -109,10 +107,28 @@ public class NotificationDispatcherService {
         log.warn("Could not update log status to FAILED for logId={}: {}", event.logId(), updateEx.getMessage());
       }
       wsPublisher.publish(new WebSocketNotificationEvent(
-          event.logId(), "DLQ", event.request().channel().name(), "Message routed to DLQ after retries"
+          event.logId(), "DLQ", event.request().channel().name(), null
       ));
       throw new AmqpRejectAndDontRequeueException(
           "Strategy failed after retries for logId=" + event.logId() + ". Routing to DLQ.", e);
+    }
+  }
+
+  /**
+   * Applies an artificial delay for demo/visualizer purposes.
+   * Only called when the {@code demo} profile is active.
+   */
+  private void applyDemoDelay(NotificationRequest request) {
+    var metadata = request.metadata();
+    if (metadata == null || !metadata.containsKey("demoDelayMs")) return;
+    if (!"true".equalsIgnoreCase(metadata.get("isVisualizerClient"))) return;
+    try {
+      long delay = Long.parseLong(metadata.get("demoDelayMs"));
+      if (delay > 0) Thread.sleep(delay);
+    } catch (InterruptedException e) {
+      Thread.currentThread().interrupt();
+    } catch (NumberFormatException ignored) {
+      // malformed value — skip delay silently
     }
   }
 }

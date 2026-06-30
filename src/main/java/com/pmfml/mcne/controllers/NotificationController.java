@@ -14,12 +14,9 @@ import com.pmfml.mcne.dtos.NotificationRequest;
 import com.pmfml.mcne.services.NotificationDispatcherService;
 import com.pmfml.mcne.services.NotificationDlqService;
 
-import org.springframework.web.bind.annotation.CrossOrigin;
-
 /**
  * REST Controller for exposing notification-related API endpoints.
  */
-@CrossOrigin(origins = "*")
 @RestController
 @RequestMapping("/api/v1/notifications")
 public class NotificationController {

@@ -42,8 +42,8 @@ class NotificationDispatcherServiceTest {
 
         @BeforeEach
         void setUp() {
-                // Injected the mock strategy into the list that the Dispatcher expects.
-                service = new NotificationDispatcherService(List.of(mockStrategy), notificationLogService, producer, wsPublisher);
+                // demoMode = false in unit tests (no Spring profile active)
+                service = new NotificationDispatcherService(List.of(mockStrategy), notificationLogService, producer, wsPublisher, false);
         }
 
         @Test
@@ -53,7 +53,6 @@ class NotificationDispatcherServiceTest {
                 when(request.channel()).thenReturn(NotificationChannel.EMAIL);
                 when(mockStrategy.supports(NotificationChannel.EMAIL)).thenReturn(true);
 
-                when(request.message()).thenReturn("Test Message");
                 NotificationLog log = NotificationLog.builder().id(UUID.randomUUID()).build();
                 when(notificationLogService.savePendingLog(request)).thenReturn(log);
 
