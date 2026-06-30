@@ -22,7 +22,6 @@ import com.pmfml.mcne.enums.NotificationChannel;
 import com.pmfml.mcne.enums.NotificationStatus;
 import com.pmfml.mcne.producers.NotificationProducer;
 import com.pmfml.mcne.strategies.NotificationStrategy;
-import com.pmfml.mcne.services.WebSocketEventPublisher;
 
 @ExtendWith(MockitoExtension.class)
 class NotificationDispatcherServiceTest {
@@ -62,7 +61,8 @@ class NotificationDispatcherServiceTest {
 
                 verify(notificationLogService).savePendingLog(request);
                 verify(producer).publish(any(NotificationEvent.class));
-                verify(wsPublisher).publish(any());
+                // dispatchToQueue emits two WS events: RECEIVED (before publish) and QUEUED (after publish)
+                verify(wsPublisher, times(2)).publish(any());
         }
 
         @Test

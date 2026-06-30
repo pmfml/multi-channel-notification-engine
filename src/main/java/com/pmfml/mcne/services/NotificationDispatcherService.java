@@ -9,7 +9,6 @@ import com.pmfml.mcne.strategies.NotificationStrategy;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.amqp.AmqpRejectAndDontRequeueException;
 import org.springframework.stereotype.Service;
-import com.pmfml.mcne.services.WebSocketEventPublisher;
 import com.pmfml.mcne.dtos.WebSocketNotificationEvent;
 
 import java.util.List;
