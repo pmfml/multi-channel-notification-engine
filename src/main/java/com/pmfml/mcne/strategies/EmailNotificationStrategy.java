@@ -65,7 +65,7 @@ public class EmailNotificationStrategy implements NotificationStrategy {
           throw SdkClientException.builder().message("Simulated AWS SES Error").build();
         }
         log.info("Demo mode: simulating successful EMAIL delivery");
-        wsPublisher.publish(new WebSocketNotificationEvent(logId, NotificationEventType.SENT, NotificationChannel.EMAIL.name()));
+        wsPublisher.publish(new WebSocketNotificationEvent(logId, NotificationEventType.SENT, NotificationChannel.EMAIL.name(), request.message()));
         return;
       }
 
@@ -80,9 +80,9 @@ public class EmailNotificationStrategy implements NotificationStrategy {
 
       sesClient.sendEmail(emailRequest);
       log.info("EMAIL successfully sent via AWS SES to: {}", request.recipient());
-      wsPublisher.publish(new WebSocketNotificationEvent(logId, NotificationEventType.SENT, NotificationChannel.EMAIL.name()));
+      wsPublisher.publish(new WebSocketNotificationEvent(logId, NotificationEventType.SENT, NotificationChannel.EMAIL.name(), request.message()));
     } catch (SdkClientException e) {
-      wsPublisher.publish(new WebSocketNotificationEvent(logId, NotificationEventType.RETRYING, NotificationChannel.EMAIL.name()));
+      wsPublisher.publish(new WebSocketNotificationEvent(logId, NotificationEventType.RETRYING, NotificationChannel.EMAIL.name(), e.getMessage()));
       throw e;
     }
   }

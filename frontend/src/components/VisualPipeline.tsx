@@ -1,7 +1,7 @@
 import React, { useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import type { WebSocketNotificationEvent } from '../services/websocket';
-import { Server, Send, Mail, AlertTriangle, Layers, Zap, Smartphone, CheckCircle } from 'lucide-react';
+import { Server, AlertTriangle, Layers, Zap, CheckCircle } from 'lucide-react';
 
 interface VisualPipelineProps {
   events: WebSocketNotificationEvent[];

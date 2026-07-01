@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import { Send, Zap, RotateCcw, AlertTriangle, Settings } from 'lucide-react';
 import { mcneApi } from '../services/api';
-import type { NotificationRequest } from '../services/api';
 
 export const MessageControls: React.FC = () => {
   const [loading, setLoading] = useState(false);

@@ -58,7 +58,7 @@ public class NotificationDispatcherService {
 
     // 1. Emit RECEIVED (API REST Box)
     wsPublisher.publish(new WebSocketNotificationEvent(
-        logEntry.getId(), NotificationEventType.RECEIVED, request.channel().name()
+        logEntry.getId(), NotificationEventType.RECEIVED, request.channel().name(), request.message()
     ));
 
     if (demoMode) {
@@ -68,7 +68,7 @@ public class NotificationDispatcherService {
     producer.publish(new NotificationEvent(logEntry.getId(), request));
 
     wsPublisher.publish(new WebSocketNotificationEvent(
-        logEntry.getId(), NotificationEventType.QUEUED, request.channel().name()
+        logEntry.getId(), NotificationEventType.QUEUED, request.channel().name(), request.message()
     ));
   }
 
@@ -99,7 +99,8 @@ public class NotificationDispatcherService {
         log.warn("Could not update log status to FAILED for logId={}: {}", event.logId(), updateEx.getMessage());
       }
       wsPublisher.publish(new WebSocketNotificationEvent(
-          event.logId(), NotificationEventType.DLQ, event.request().channel().name()
+          event.logId(), NotificationEventType.DLQ, event.request().channel().name(),
+          "Message routed to DLQ after retries"
       ));
       throw new AmqpRejectAndDontRequeueException(
           "Strategy failed after retries for logId=" + event.logId() + ". Routing to DLQ.", e);

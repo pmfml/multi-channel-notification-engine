@@ -1,8 +1,13 @@
-import { Client, IMessage } from '@stomp/stompjs';
+import { Client } from '@stomp/stompjs';
+import type { IMessage } from '@stomp/stompjs';
+
+// WebSocket broker URL is configurable via a Vite env var, with a default
+// pointing at the local backend.
+const WS_URL = import.meta.env.VITE_WS_URL ?? 'ws://localhost:8081/ws-mcne';
 
 export interface WebSocketNotificationEvent {
   logId: string;
-  eventType: string; // QUEUED, PROCESSING, RETRYING, SENT, DLQ
+  eventType: string; // RECEIVED, QUEUED, PROCESSING, RETRYING, SENT, DLQ
   channel: string;
   message: string;
 }
@@ -15,7 +20,7 @@ class WebSocketService {
 
   constructor() {
     this.client = new Client({
-      brokerURL: 'ws://localhost:8081/ws-mcne',
+      brokerURL: WS_URL,
       reconnectDelay: 5000,
       heartbeatIncoming: 4000,
       heartbeatOutgoing: 4000,

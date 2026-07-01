@@ -57,7 +57,7 @@ public class SmsNotificationStrategy implements NotificationStrategy {
           throw SdkClientException.builder().message("Simulated AWS SNS Error").build();
         }
         log.info("Demo mode: simulating successful SMS delivery");
-        wsPublisher.publish(new WebSocketNotificationEvent(logId, NotificationEventType.SENT, NotificationChannel.SMS.name()));
+        wsPublisher.publish(new WebSocketNotificationEvent(logId, NotificationEventType.SENT, NotificationChannel.SMS.name(), request.message()));
         return;
       }
 
@@ -68,9 +68,9 @@ public class SmsNotificationStrategy implements NotificationStrategy {
 
       snsClient.publish(publishRequest);
       log.info("SMS successfully sent via AWS SNS to: {}", request.recipient());
-      wsPublisher.publish(new WebSocketNotificationEvent(logId, NotificationEventType.SENT, NotificationChannel.SMS.name()));
+      wsPublisher.publish(new WebSocketNotificationEvent(logId, NotificationEventType.SENT, NotificationChannel.SMS.name(), request.message()));
     } catch (SdkClientException e) {
-      wsPublisher.publish(new WebSocketNotificationEvent(logId, NotificationEventType.RETRYING, NotificationChannel.SMS.name()));
+      wsPublisher.publish(new WebSocketNotificationEvent(logId, NotificationEventType.RETRYING, NotificationChannel.SMS.name(), e.getMessage()));
       throw e;
     }
   }

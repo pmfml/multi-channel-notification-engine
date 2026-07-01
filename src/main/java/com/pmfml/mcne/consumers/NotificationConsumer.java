@@ -43,7 +43,8 @@ public class NotificationConsumer {
     wsPublisher.publish(new WebSocketNotificationEvent(
         event.logId(),
         NotificationEventType.PROCESSING,
-        event.request().channel().name()
+        event.request().channel().name(),
+        event.request().message()
     ));
 
     applyDemoDelay(event);
