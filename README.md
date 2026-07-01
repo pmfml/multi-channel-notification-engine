@@ -21,7 +21,7 @@ Acting as a central gateway in a microservices architecture, it allows different
 - **Framework:** Spring Boot 3.5.x with Spring Data JPA
 - **Security:** Spring Security (API key authentication via `X-API-Key` header)
 - **Message Broker:** RabbitMQ
-- **Database:** PostgreSQL 16 (schema managed by `spring.jpa.hibernate.ddl-auto`)
+- **Database:** PostgreSQL 16 (schema managed by Flyway migrations)
 - **AWS Providers:** SES (Email), SNS (SMS) via AWS SDK v2
 - **Local Containerization:** Docker / Docker Compose
 - **Testing:** JUnit 5, Mockito, Spring WebMvcTest, H2 (in-memory for repository tests)

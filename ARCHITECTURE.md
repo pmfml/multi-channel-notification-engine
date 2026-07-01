@@ -184,7 +184,7 @@ The `notification_log` table is the single source of truth for tracking the life
 erDiagram
     NOTIFICATION_LOG {
         UUID id PK "Generated (UUID strategy)"
-        VARCHAR customer_name_email "Recipient address or phone number (max 100)"
+        VARCHAR recipient "Recipient address or phone number (max 100)"
         VARCHAR message "Notification body text (max 300)"
         VARCHAR channel "EMAIL | SMS | PUSH | ..."
         VARCHAR status "PENDING | SENT | FAILED"
@@ -207,7 +207,7 @@ The resiliency pipeline consists of two independent layers:
 | Layer | Mechanism | Scope | Configuration |
 |---|---|---|---|
 | Application-level | `@Retryable(SdkClientException)` | Transient network errors | 3 attempts, 2s/4s backoff |
-| Broker-level | RabbitMQ Dead Letter Exchange (DLX) | Messages rejected after all retries | Durable DLQ, manual reprocessing |
+| Broker-level | RabbitMQ Dead Letter Exchange (DLX) | Messages rejected after all retries | Durable DLQ, manual reprocessing (poison messages discarded after 3 trips) |
 
 `@Retryable` is configured to only retry `SdkClientException` (network and timeout errors). Permanent provider errors (e.g. unverified SES sender address) are not retried and go directly to the DLQ.
 
