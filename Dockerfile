@@ -19,6 +19,16 @@ RUN ./mvnw clean package -DskipTests
 FROM eclipse-temurin:21-jre-alpine
 WORKDIR /app
 
+# Run as non-root user for security
+RUN addgroup -S mcne && adduser -S mcne -G mcne
+USER mcne
+
 COPY --from=builder /app/target/*.jar app.jar
+
 EXPOSE 8081
+
+# Health check using the Spring Boot Actuator endpoint
+HEALTHCHECK --interval=30s --timeout=5s --start-period=15s --retries=3 \
+  CMD wget --no-verbose --tries=1 --spider http://localhost:8081/actuator/health || exit 1
+
 ENTRYPOINT ["java", "-jar", "app.jar"]

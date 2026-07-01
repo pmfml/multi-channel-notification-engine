@@ -1,0 +1,10 @@
+.git
+.github
+.vscode
+.mvn/wrapper/maven-wrapper.jar
+target
+frontend/node_modules
+frontend/dist
+.env
+*.md
+.test-scripts
