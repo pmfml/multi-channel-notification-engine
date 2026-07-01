@@ -109,6 +109,40 @@ Demo mode (enables Visualizer delays and simulated errors; never use in producti
 
 The REST API will be available at `http://localhost:8081`.
 
+## 🖥️ Running the Visualizer (Frontend)
+
+The project ships with a React + Vite frontend that visually demonstrates the asynchronous pipeline in real time: messages flowing through the API, RabbitMQ, the consumer, and on to delivery or the DLQ, plus a live event terminal and interactive controls (single send, batch simulator, failure injection, consumer concurrency, and DLQ reprocessing).
+
+### 1. Start the backend in demo mode
+
+The Visualizer relies on the `demo` profile to enable the animated delays and the "Force AWS Error" simulation (this behaviour is intentionally inactive in production):
+
+```bash
+./mvnw spring-boot:run -Dspring-boot.run.profiles=demo
+```
+
+### 2. Start the frontend
+
+```bash
+cd frontend
+npm install
+npm run dev
+```
+
+The Visualizer opens at `http://localhost:5173`.
+
+### Configuration
+
+The frontend works out of the box with no configuration: it talks to `http://localhost:8081` and authenticates with the default API key (`dev-only-key`). To point it at a different backend or key, copy `frontend/.env.example` to `frontend/.env` and adjust:
+
+| Variable | Description | Default |
+| :--- | :--- | :--- |
+| `VITE_API_URL` | Backend REST base URL | `http://localhost:8081` |
+| `VITE_WS_URL` | Backend WebSocket (STOMP) URL | `ws://localhost:8081/ws-mcne` |
+| `VITE_API_KEY` | API key sent via `X-API-Key` (must match backend `MCNE_API_KEY`) | `dev-only-key` |
+
+> If you set a custom `MCNE_API_KEY` on the backend, set the same value in `VITE_API_KEY` so the Visualizer stays authenticated. The `5173` origin is already allowed by the default CORS configuration.
+
 ## 🔐 Authentication
 
 All `POST` and `PUT` endpoints require an API key sent in the request header:
@@ -189,7 +223,72 @@ Unauthorized response (`401 Unauthorized`):
 }
 ```
 
-## 📂 Project Structure and Coding Standards
+## � Observing the Pipeline Without the Frontend
+
+The Visualizer is optional. The full asynchronous lifecycle can be observed using only backend tooling: the RabbitMQ Management UI, the application logs, and the database. This is the recommended path to inspect the internals.
+
+### 1. RabbitMQ Management UI
+
+Open `http://localhost:15672` (default credentials: `guest` / `guest`) and go to the **Queues** tab. Two queues tell the whole story:
+
+| Queue | What to watch |
+| :--- | :--- |
+| `notification.queue` | Main work queue. The "Ready" and "Unacked" counters spike when you publish and drain as the consumer processes messages. |
+| `notification.dlq` | Dead Letter Queue. Messages land here after all retries are exhausted. |
+
+Useful actions in the UI:
+- Watch the message-rate graphs on `notification.queue` while sending a burst of `curl` requests.
+- Click `notification.dlq` and use **Get messages** to inspect a failed payload without removing it.
+- Pause processing by scaling the consumer to zero (`PUT /api/v1/config/concurrency?count=0`) and watch messages pile up as "Ready"; then scale back up and watch them drain.
+
+### 2. Application Logs
+
+The console logs narrate each stage (`@Slf4j`), so a `tail` of the running app shows the same lifecycle the Visualizer animates:
+
+```
+Message received for log ID: 6f1c...      # consumed from the queue
+Sending EMAIL to: user@example.com         # strategy invoked
+EMAIL successfully sent via AWS SES ...     # delivered  (or)
+Demo mode: simulating AWS SES error ...     # forced failure -> retry -> DLQ
+```
+
+### 3. Database (final state)
+
+Every notification is persisted in the `notification_log` table, the source of truth for the final status:
+
+```bash
+docker exec -it mcne-postgres psql -U mcne_user -d mcne_db \
+  -c "SELECT id, channel, status, created_at FROM notification_log ORDER BY created_at DESC LIMIT 10;"
+```
+
+The `status` column moves through `PENDING` then `SENT` or `FAILED`.
+
+### 4. Triggering a failure to see the DLQ (curl only)
+
+Run the backend in `demo` mode and send a request flagged to simulate a provider error. It will exhaust its retries and be routed to `notification.dlq`:
+
+```bash
+curl -X POST http://localhost:8081/api/v1/notifications \
+  -H "Content-Type: application/json" \
+  -H "X-API-Key: dev-only-key" \
+  -H "X-MCNE-Client: Visualizer" \
+  -d '{
+    "recipient": "user@example.com",
+    "message": "This one will fail",
+    "channel": "EMAIL",
+    "metadata": { "simulateError": "true" }
+  }'
+```
+
+Watch `notification.dlq` grow in the Management UI, then replay every dead-lettered message back onto the main exchange:
+
+```bash
+curl -X POST http://localhost:8081/api/v1/notifications/dlq/reprocess \
+  -H "X-API-Key: dev-only-key"
+# -> {"message":"1 messages reprocessed successfully."}
+```
+
+## �📂 Project Structure and Coding Standards
 
 Coding styles, architecture designs, and patterns are documented in the reference guides:
 
