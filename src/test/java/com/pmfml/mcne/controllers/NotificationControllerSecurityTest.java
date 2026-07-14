@@ -1,6 +1,7 @@
 package com.pmfml.mcne.controllers;
 
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.Mockito.doNothing;
 import static org.springframework.security.test.web.servlet.setup.SecurityMockMvcConfigurers.springSecurity;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -30,8 +31,7 @@ import com.pmfml.mcne.services.NotificationDlqService;
  * Loads the real {@link SecurityConfig} and verifies that the API key
  * filter correctly enforces authentication on protected endpoints.
  */
-@WebMvcTest(controllers = NotificationController.class,
-    excludeAutoConfiguration = UserDetailsServiceAutoConfiguration.class)
+@WebMvcTest(controllers = NotificationController.class, excludeAutoConfiguration = UserDetailsServiceAutoConfiguration.class)
 @Import(SecurityConfig.class)
 @TestPropertySource(properties = "mcne.security.api-key=test-key-123")
 class NotificationControllerSecurityTest {
@@ -82,7 +82,7 @@ class NotificationControllerSecurityTest {
   @Test
   @DisplayName("Should return 202 Accepted when X-API-Key is correct")
   void shouldReturn202WhenApiKeyIsCorrect() throws Exception {
-    doNothing().when(dispatcherService).dispatchToQueue(any(NotificationRequest.class));
+    doNothing().when(dispatcherService).dispatchToQueue(any(NotificationRequest.class), anyBoolean());
 
     mockMvc.perform(post("/api/v1/notifications")
         .contentType(MediaType.APPLICATION_JSON)

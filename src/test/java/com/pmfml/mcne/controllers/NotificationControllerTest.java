@@ -1,6 +1,7 @@
 package com.pmfml.mcne.controllers;
 
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.Mockito.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
@@ -22,8 +23,8 @@ import com.pmfml.mcne.services.NotificationDlqService;
 // Security auto-configuration is excluded here because @WebMvcTest is a controller
 // slice test focused on MVC behaviour (validation, routing, serialization).
 // API key authentication is covered in NotificationControllerSecurityTest.
-@WebMvcTest(controllers = NotificationController.class,
-    excludeAutoConfiguration = {SecurityAutoConfiguration.class, UserDetailsServiceAutoConfiguration.class})
+@WebMvcTest(controllers = NotificationController.class, excludeAutoConfiguration = { SecurityAutoConfiguration.class,
+    UserDetailsServiceAutoConfiguration.class })
 class NotificationControllerTest {
 
   @Autowired
@@ -57,7 +58,7 @@ class NotificationControllerTest {
         .content(requestBody))
         .andExpect(status().isAccepted());
 
-    verify(dispatcherService).dispatchToQueue(any(NotificationRequest.class));
+    verify(dispatcherService).dispatchToQueue(any(NotificationRequest.class), anyBoolean());
   }
 
   @Test
@@ -138,7 +139,7 @@ class NotificationControllerTest {
   @DisplayName("Should return 400 Bad Request when dispatcher throws IllegalArgumentException")
   void shouldReturn400WhenDispatcherThrowsIllegalArgument() throws Exception {
     doThrow(new IllegalArgumentException("Unsupported notification channel: PUSH"))
-        .when(dispatcherService).dispatchToQueue(any());
+        .when(dispatcherService).dispatchToQueue(any(), anyBoolean());
 
     String requestBody = """
         {

@@ -1,5 +1,6 @@
 package com.pmfml.mcne.controllers;
 
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -18,16 +19,20 @@ import org.springframework.web.bind.annotation.GetMapping;
 @RequestMapping("/api/v1/status")
 public class HealthCheckController {
 
+  @Value("${spring.profiles.active:default}")
+  private String activeProfile;
+
   /**
    * Returns the current health status and environment of the application.
    *
-   * @return a {@link SystemStatusResponse} containing status, environment, and timestamp
+   * @return a {@link SystemStatusResponse} containing status, environment, and
+   *         timestamp
    */
   @GetMapping
   public ResponseEntity<SystemStatusResponse> checkStatus() {
     SystemStatusResponse response = new SystemStatusResponse(
         "Up and Running",
-        "Development",
+        activeProfile,
         Instant.now());
 
     return ResponseEntity.ok(response);

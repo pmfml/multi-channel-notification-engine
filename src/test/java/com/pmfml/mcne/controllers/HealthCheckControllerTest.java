@@ -11,8 +11,8 @@ import org.springframework.boot.autoconfigure.security.servlet.UserDetailsServic
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.test.web.servlet.MockMvc;
 
-@WebMvcTest(controllers = HealthCheckController.class,
-    excludeAutoConfiguration = {SecurityAutoConfiguration.class, UserDetailsServiceAutoConfiguration.class})
+@WebMvcTest(controllers = HealthCheckController.class, excludeAutoConfiguration = { SecurityAutoConfiguration.class,
+    UserDetailsServiceAutoConfiguration.class })
 class HealthCheckControllerTest {
 
   @Autowired
@@ -24,7 +24,7 @@ class HealthCheckControllerTest {
     mockMvc.perform(get("/api/v1/status"))
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.status").value("Up and Running"))
-        .andExpect(jsonPath("$.environment").value("Development"))
+        .andExpect(jsonPath("$.environment").value("default"))
         .andExpect(jsonPath("$.timestamp").exists());
   }
 }

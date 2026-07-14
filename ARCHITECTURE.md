@@ -84,10 +84,10 @@ Spring automatically picks it up and injects it into the strategy list. The same
 classDiagram
     class NotificationDispatcherService {
         - List~NotificationStrategy~ strategies
-        - boolean demoMode
-        + dispatchToQueue(NotificationRequest)
+        - DemoDelayHelper demoDelayHelper
+        + dispatchToQueue(NotificationRequest, boolean)
         + processFromQueue(NotificationEvent)
-        - applyDemoDelay(NotificationRequest)
+        - markAsVisualizer(NotificationRequest)
     }
 
     class NotificationStrategy {
@@ -141,18 +141,20 @@ classDiagram
 All `POST` and `PUT` endpoints under `/api/**` are protected by a stateless API key filter implemented in `SecurityConfig`.
 
 Flow:
+
 1. Client sends `X-API-Key: <key>` with every request.
 2. `apiKeyFilter` (a `OncePerRequestFilter`) compares the header value against the configured key.
 3. On match: populates the `SecurityContext` with a `UsernamePasswordAuthenticationToken` (role `ROLE_API`) and forwards the request.
 4. On mismatch: returns `401 Unauthorized` with a JSON error body and never reaches the controller.
 
 Public endpoints (no key required):
+
 - `GET /api/v1/status`
 - `GET /actuator/health`, `GET /actuator/info`
 - WebSocket handshake at `/ws-mcne/**`
 
-| Property | Env Variable | Default (dev) |
-|---|---|---|
+| Property                | Env Variable   | Default (dev)  |
+| ----------------------- | -------------- | -------------- |
 | `mcne.security.api-key` | `MCNE_API_KEY` | `dev-only-key` |
 
 Change `MCNE_API_KEY` to a strong random value before exposing the service publicly.
@@ -161,8 +163,8 @@ Change `MCNE_API_KEY` to a strong random value before exposing the service publi
 
 CORS is managed centrally in `CorsConfig`. Allowed origins are driven by the `MCNE_ALLOWED_ORIGINS` environment variable (comma-separated). There are no `@CrossOrigin` annotations on individual controllers.
 
-| Property | Env Variable | Default (dev) |
-|---|---|---|
+| Property                    | Env Variable           | Default (dev)           |
+| --------------------------- | ---------------------- | ----------------------- |
 | `mcne.cors.allowed-origins` | `MCNE_ALLOWED_ORIGINS` | `http://localhost:5173` |
 
 ### WebSocket Privacy
@@ -204,10 +206,10 @@ FAILED   ->  PENDING (via DLQ reprocessing endpoint)
 
 The resiliency pipeline consists of two independent layers:
 
-| Layer | Mechanism | Scope | Configuration |
-|---|---|---|---|
-| Application-level | `@Retryable(SdkClientException)` | Transient network errors | 3 attempts, 2s/4s backoff |
-| Broker-level | RabbitMQ Dead Letter Exchange (DLX) | Messages rejected after all retries | Durable DLQ, manual reprocessing (poison messages discarded after 3 trips) |
+| Layer             | Mechanism                           | Scope                               | Configuration                                                              |
+| ----------------- | ----------------------------------- | ----------------------------------- | -------------------------------------------------------------------------- |
+| Application-level | `@Retryable(SdkClientException)`    | Transient network errors            | 3 attempts, 2s/4s backoff                                                  |
+| Broker-level      | RabbitMQ Dead Letter Exchange (DLX) | Messages rejected after all retries | Durable DLQ, manual reprocessing (poison messages discarded after 3 trips) |
 
 `@Retryable` is configured to only retry `SdkClientException` (network and timeout errors). Permanent provider errors (e.g. unverified SES sender address) are not retried and go directly to the DLQ.
 
@@ -215,14 +217,14 @@ The resiliency pipeline consists of two independent layers:
 
 The engine implements a non-blocking Observer Pattern via STOMP WebSockets (`/ws-mcne`). The `WebSocketEventPublisher` service broadcasts state changes to `/topic/notifications`. Each event payload contains `logId`, `eventType` (a `NotificationEventType` enum), `channel`, and `message`. The `message` field is stripped in production (see WebSocket Privacy above) and kept in demo mode for the Visualizer.
 
-| Event | Emitted by | Meaning |
-|---|---|---|
-| `RECEIVED` | `NotificationDispatcherService` | HTTP request accepted, log entry created |
-| `QUEUED` | `NotificationDispatcherService` | Message published to RabbitMQ |
-| `PROCESSING` | `NotificationConsumer` | Worker thread picked up the message |
-| `RETRYING` | Strategy implementations | Transient error caught, Spring Retry will attempt again |
-| `SENT` | Strategy implementations | Delivery confirmed by the external provider |
-| `DLQ` | `NotificationDispatcherService` | All retries exhausted, message routed to Dead Letter Queue |
+| Event        | Emitted by                      | Meaning                                                    |
+| ------------ | ------------------------------- | ---------------------------------------------------------- |
+| `RECEIVED`   | `NotificationDispatcherService` | HTTP request accepted, log entry created                   |
+| `QUEUED`     | `NotificationDispatcherService` | Message published to RabbitMQ                              |
+| `PROCESSING` | `NotificationConsumer`          | Worker thread picked up the message                        |
+| `RETRYING`   | Strategy implementations        | Transient error caught, Spring Retry will attempt again    |
+| `SENT`       | Strategy implementations        | Delivery confirmed by the external provider                |
+| `DLQ`        | `NotificationDispatcherService` | All retries exhausted, message routed to Dead Letter Queue |
 
 ### Demo Mode
 
@@ -240,23 +242,23 @@ To activate: `--spring.profiles.active=demo`
 
 ### Environment Variables
 
-| Variable | Property | Description | Default (dev) |
-|---|---|---|---|
-| `DB_USERNAME` | `spring.datasource.username` | PostgreSQL username | `mcne_user` |
-| `DB_PASSWORD` | `spring.datasource.password` | PostgreSQL password | `mcne_password` |
-| `DB_NAME` | `spring.datasource.url` | PostgreSQL database name | `mcne_db` |
-| `AWS_REGION` | `aws.region` | AWS region for SES/SNS | `us-east-2` |
-| `AWS_ACCESS_KEY` | `aws.accessKeyId` | AWS access key (blank = use DefaultCredentialsProvider) | _(blank)_ |
-| `AWS_SECRET_KEY` | `aws.secretKey` | AWS secret key (blank = use DefaultCredentialsProvider) | _(blank)_ |
-| `AWS_VERIFIED_EMAIL` | `aws.ses.verified-email` | Verified SES sender email | `none@example.com` |
-| `MCNE_API_KEY` | `mcne.security.api-key` | API key for `X-API-Key` header | `dev-only-key` |
-| `MCNE_ALLOWED_ORIGINS` | `mcne.cors.allowed-origins` | Comma-separated allowed CORS origins | `http://localhost:5173` |
+| Variable               | Property                     | Description                                             | Default (dev)           |
+| ---------------------- | ---------------------------- | ------------------------------------------------------- | ----------------------- |
+| `DB_USERNAME`          | `spring.datasource.username` | PostgreSQL username                                     | `mcne_user`             |
+| `DB_PASSWORD`          | `spring.datasource.password` | PostgreSQL password                                     | `mcne_password`         |
+| `DB_NAME`              | `spring.datasource.url`      | PostgreSQL database name                                | `mcne_db`               |
+| `AWS_REGION`           | `aws.region`                 | AWS region for SES/SNS                                  | `us-east-2`             |
+| `AWS_ACCESS_KEY`       | `aws.accessKeyId`            | AWS access key (blank = use DefaultCredentialsProvider) | _(blank)_               |
+| `AWS_SECRET_KEY`       | `aws.secretKey`              | AWS secret key (blank = use DefaultCredentialsProvider) | _(blank)_               |
+| `AWS_VERIFIED_EMAIL`   | `aws.ses.verified-email`     | Verified SES sender email                               | `none@example.com`      |
+| `MCNE_API_KEY`         | `mcne.security.api-key`      | API key for `X-API-Key` header                          | `dev-only-key`          |
+| `MCNE_ALLOWED_ORIGINS` | `mcne.cors.allowed-origins`  | Comma-separated allowed CORS origins                    | `http://localhost:5173` |
 
 ### Infrastructure Ports (Local Docker)
 
-| Service | Internal Port | External Port |
-|---|---|---|
-| PostgreSQL | 5432 | 5435 (non-standard to avoid conflicts) |
-| RabbitMQ AMQP | 5672 | 5672 |
-| RabbitMQ UI | 15672 | 15672 |
-| MCNE App | 8081 | 8081 |
+| Service       | Internal Port | External Port                          |
+| ------------- | ------------- | -------------------------------------- |
+| PostgreSQL    | 5432          | 5435 (non-standard to avoid conflicts) |
+| RabbitMQ AMQP | 5672          | 5672                                   |
+| RabbitMQ UI   | 15672         | 15672                                  |
+| MCNE App      | 8081          | 8081                                   |

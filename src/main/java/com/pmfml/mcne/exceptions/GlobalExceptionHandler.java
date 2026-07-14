@@ -4,8 +4,6 @@ import java.time.Instant;
 import java.util.Map;
 import java.util.stream.Collectors;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.FieldError;
@@ -13,13 +11,15 @@ import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 
+import lombok.extern.slf4j.Slf4j;
+
+@Slf4j
 @ControllerAdvice
 public class GlobalExceptionHandler {
 
-  private static final Logger log = LoggerFactory.getLogger(GlobalExceptionHandler.class);
-
   /**
-   * Handles Bean Validation failures (@Valid on @RequestBody), returning a structured
+   * Handles Bean Validation failures (@Valid on @RequestBody), returning a
+   * structured
    * 400 response with per-field error messages.
    */
   @ExceptionHandler(MethodArgumentNotValidException.class)
@@ -37,7 +37,8 @@ public class GlobalExceptionHandler {
   }
 
   /**
-   * Handles domain-level illegal argument exceptions (e.g. unsupported notification channel),
+   * Handles domain-level illegal argument exceptions (e.g. unsupported
+   * notification channel),
    * returning a 400 Bad Request with a descriptive message.
    */
   @ExceptionHandler(IllegalArgumentException.class)
@@ -64,7 +65,8 @@ public class GlobalExceptionHandler {
   }
 
   /**
-   * Catch-all handler for any unexpected exception, returning a generic 500 response
+   * Catch-all handler for any unexpected exception, returning a generic 500
+   * response
    * without leaking internal stack trace details to the client.
    */
   @ExceptionHandler(Exception.class)

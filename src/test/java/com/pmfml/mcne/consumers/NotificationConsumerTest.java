@@ -17,6 +17,7 @@ import com.pmfml.mcne.dtos.NotificationEvent;
 import com.pmfml.mcne.dtos.NotificationRequest;
 import com.pmfml.mcne.dtos.WebSocketNotificationEvent;
 import com.pmfml.mcne.enums.NotificationChannel;
+import com.pmfml.mcne.services.DemoDelayHelper;
 import com.pmfml.mcne.services.NotificationDispatcherService;
 import com.pmfml.mcne.services.WebSocketEventPublisher;
 
@@ -29,12 +30,15 @@ class NotificationConsumerTest {
   @Mock
   private WebSocketEventPublisher wsPublisher;
 
+  @Mock
+  private DemoDelayHelper demoDelayHelper;
+
   private NotificationConsumer consumer;
 
   @BeforeEach
   void setUp() {
-    // demoMode = false for production-path tests
-    consumer = new NotificationConsumer(dispatcherService, wsPublisher, false);
+    // DemoDelayHelper is mocked, so delays are a no-op in these tests
+    consumer = new NotificationConsumer(dispatcherService, wsPublisher, demoDelayHelper);
   }
 
   @Test
@@ -53,7 +57,7 @@ class NotificationConsumerTest {
   @Test
   @DisplayName("consume() in demo mode should still delegate to dispatcher")
   void shouldDelegateInDemoMode() {
-    consumer = new NotificationConsumer(dispatcherService, wsPublisher, true);
+    consumer = new NotificationConsumer(dispatcherService, wsPublisher, demoDelayHelper);
     NotificationRequest request = new NotificationRequest(
         "user@example.com", "Hello!", NotificationChannel.EMAIL,
         Map.of("isVisualizerClient", "true", "demoDelayMs", "0"));

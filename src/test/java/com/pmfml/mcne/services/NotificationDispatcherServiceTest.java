@@ -38,12 +38,16 @@ class NotificationDispatcherServiceTest {
         @Mock
         private WebSocketEventPublisher wsPublisher;
 
+        @Mock
+        private DemoDelayHelper demoDelayHelper;
+
         private NotificationDispatcherService service;
 
         @BeforeEach
         void setUp() {
-                // demoMode = false in unit tests (no Spring profile active)
-                service = new NotificationDispatcherService(List.of(mockStrategy), notificationLogService, producer, wsPublisher, false);
+                // DemoDelayHelper is mocked, so delays are a no-op in unit tests
+                service = new NotificationDispatcherService(List.of(mockStrategy), notificationLogService, producer,
+                                wsPublisher, demoDelayHelper);
         }
 
         @Test
@@ -56,11 +60,12 @@ class NotificationDispatcherServiceTest {
                 NotificationLog log = NotificationLog.builder().id(UUID.randomUUID()).build();
                 when(notificationLogService.savePendingLog(request)).thenReturn(log);
 
-                service.dispatchToQueue(request);
+                service.dispatchToQueue(request, false);
 
                 verify(notificationLogService).savePendingLog(request);
                 verify(producer).publish(any(NotificationEvent.class));
-                // dispatchToQueue emits two WS events: RECEIVED (before publish) and QUEUED (after publish)
+                // dispatchToQueue emits two WS events: RECEIVED (before publish) and QUEUED
+                // (after publish)
                 verify(wsPublisher, times(2)).publish(any());
         }
 
@@ -71,7 +76,7 @@ class NotificationDispatcherServiceTest {
                 when(request.channel()).thenReturn(NotificationChannel.EMAIL);
                 when(mockStrategy.supports(NotificationChannel.EMAIL)).thenReturn(false);
 
-                assertThatThrownBy(() -> service.dispatchToQueue(request))
+                assertThatThrownBy(() -> service.dispatchToQueue(request, false))
                                 .isInstanceOf(IllegalArgumentException.class)
                                 .hasMessageContaining("Unsupported notification channel");
 
