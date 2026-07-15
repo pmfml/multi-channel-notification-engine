@@ -57,28 +57,29 @@ sequenceDiagram
 
 > Backoff is 2s/4s across 3 attempts (`@Retryable`). Failed messages rest in the DLQ until replayed via `POST /api/v1/notifications/dlq/reprocess`.
 
-## 3. Extensibility: The Strategy Pattern
+## 3. Extensibility: Strategy + Template Method
 
-The engine uses the **Strategy Design Pattern** to adhere to the Open/Closed Principle (OCP) from SOLID. The `NotificationDispatcherService` resolves the correct strategy at runtime by calling `supports(channel)` on each registered bean, with no knowledge of which providers exist.
+The engine uses the **Strategy** and **Template Method** design patterns to adhere to the Open/Closed Principle (OCP) from SOLID. The `NotificationStrategy` interface defines the contract; `AbstractNotificationStrategy` implements the invariant skeleton — retry policy, demo-mode simulation, structured logging and WebSocket event broadcasting — via the Template Method pattern. Concrete strategies extend the abstract class and implement only three small methods: `channel()`, `providerName()`, and `doSend()`. The `NotificationDispatcherService` resolves the correct strategy at runtime by calling `supports(channel)` on each registered bean, with no knowledge of which providers exist.
 
 Adding a new delivery channel requires only one new class:
 
 ```java
 @Component
-public class PushNotificationStrategy implements NotificationStrategy {
-    @Override
-    public boolean supports(NotificationChannel channel) {
-        return channel == NotificationChannel.PUSH;
+public class PushNotificationStrategy extends AbstractNotificationStrategy {
+    public PushNotificationStrategy(WebSocketEventPublisher wsPublisher,
+        @Value("#{environment.acceptsProfiles('demo')}") boolean demoMode) {
+      super(wsPublisher, demoMode);
     }
 
-    @Override
-    public void send(UUID logId, NotificationRequest request) {
+    @Override protected NotificationChannel channel() { return NotificationChannel.PUSH; }
+    @Override protected String providerName() { return "Firebase FCM"; }
+    @Override protected void doSend(NotificationRequest request) {
         // Firebase FCM, APNs, or any push provider
     }
 }
 ```
 
-Spring automatically picks it up and injects it into the strategy list. The same pattern applies to any other channel: Twilio SMS, Slack, Microsoft Teams, outbound Webhooks, WhatsApp Business API, and so on.
+Spring automatically picks it up and injects it into the strategy list. Retry, logging, and WS event broadcasting are inherited for free. The same pattern applies to any other channel: Twilio SMS, Slack, Microsoft Teams, outbound Webhooks, WhatsApp Business API, and so on.
 
 ```mermaid
 classDiagram
@@ -96,42 +97,50 @@ classDiagram
         + send(UUID logId, NotificationRequest) void
     }
 
-    class EmailNotificationStrategy {
-        - SesClient sesClient
-        - boolean demoMode
+    class AbstractNotificationStrategy {
+        <<abstract>>
+        # wsPublisher: WebSocketEventPublisher
+        # demoMode: boolean
+        # channel() NotificationChannel
+        # providerName() String
+        # doSend(NotificationRequest) void
         + supports(NotificationChannel) boolean
         + send(UUID logId, NotificationRequest) void
+    }
+
+    class EmailNotificationStrategy {
+        - SesClient sesClient
+        - senderEmail: String
+        # channel() EMAIL
+        # providerName() AWS SES
+        # doSend(NotificationRequest) void
     }
 
     class SmsNotificationStrategy {
         - SnsClient snsClient
-        - boolean demoMode
-        + supports(NotificationChannel) boolean
-        + send(UUID logId, NotificationRequest) void
+        # channel() SMS
+        # providerName() AWS SNS
+        # doSend(NotificationRequest) void
     }
 
     class PushNotificationStrategy {
-        + supports(NotificationChannel) boolean
-        + send(UUID logId, NotificationRequest) void
-    }
-
-    class WebhookNotificationStrategy {
-        + supports(NotificationChannel) boolean
-        + send(UUID logId, NotificationRequest) void
+        # channel() PUSH
+        # providerName() Firebase FCM
+        # doSend(NotificationRequest) void
     }
 
     NotificationDispatcherService --> NotificationStrategy : Delegates sending
-    NotificationStrategy <|.. EmailNotificationStrategy : Implements
-    NotificationStrategy <|.. SmsNotificationStrategy : Implements
-    NotificationStrategy <|.. PushNotificationStrategy : Planned
-    NotificationStrategy <|.. WebhookNotificationStrategy : Planned
+    NotificationStrategy <|.. AbstractNotificationStrategy : Implements
+    AbstractNotificationStrategy <|-- EmailNotificationStrategy : Extends
+    AbstractNotificationStrategy <|-- SmsNotificationStrategy : Extends
+    AbstractNotificationStrategy <|-- PushNotificationStrategy : Planned
 
     style NotificationDispatcherService fill:#cce5ff,stroke:#007bff,stroke-width:2px,color:#000000
     style NotificationStrategy fill:#d4edda,stroke:#28a745,stroke-width:2px,color:#000000
+    style AbstractNotificationStrategy fill:#d4edda,stroke:#28a745,stroke-width:2px,color:#000000
     style EmailNotificationStrategy fill:#fff3cd,stroke:#ffc107,stroke-width:2px,color:#000000
     style SmsNotificationStrategy fill:#fff3cd,stroke:#ffc107,stroke-width:2px,color:#000000
     style PushNotificationStrategy fill:#e8e8e8,stroke:#aaaaaa,stroke-width:2px,color:#000000
-    style WebhookNotificationStrategy fill:#e8e8e8,stroke:#aaaaaa,stroke-width:2px,color:#000000
 ```
 
 ## 4. Security Architecture
@@ -230,9 +239,9 @@ The engine implements a non-blocking Observer Pattern via STOMP WebSockets (`/ws
 
 A `demo` Spring profile activates additional behaviour for portfolio demonstration:
 
-- `DemoConfig` registers a servlet filter that marks requests containing `X-MCNE-Client: Visualizer`.
-- `NotificationConsumer` and strategy implementations apply artificial delays (`demoDelayMs` metadata) to make the pipeline flow visible in the Visualizer frontend.
-- Strategies accept `simulateError=true` to force `SdkClientException`, triggering the retry and DLQ flow without real AWS calls.
+- The `NotificationController` detects the `X-MCNE-Client: Visualizer` header and passes a `fromVisualizer` flag to the dispatcher, which injects the `isVisualizerClient` metadata key downstream.
+- `DemoDelayHelper` (shared by the consumer and dispatcher) applies artificial delays (`demoDelayMs` metadata) to make the pipeline flow visible in the Visualizer frontend.
+- `AbstractNotificationStrategy` accepts `simulateError=true` to force `SdkClientException`, triggering the retry and DLQ flow without real AWS calls.
 
 The entire demo code path is inactive when the `demo` profile is not enabled. The `demoMode` flag is injected via `@Value("#{environment.acceptsProfiles('demo')}")` and short-circuits all simulation logic at runtime.
 
