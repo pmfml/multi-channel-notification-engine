@@ -52,6 +52,7 @@ class NotificationConsumerTest {
 
     verify(wsPublisher).publish(any(WebSocketNotificationEvent.class));
     verify(dispatcherService).processFromQueue(event);
+    verify(demoDelayHelper, times(2)).applyDelay(request.metadata());
   }
 
   @Test
@@ -66,5 +67,6 @@ class NotificationConsumerTest {
     consumer.consume(event);
 
     verify(dispatcherService).processFromQueue(event);
+    verify(demoDelayHelper, times(2)).applyDelay(request.metadata());
   }
 }

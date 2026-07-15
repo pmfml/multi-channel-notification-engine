@@ -12,7 +12,10 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.amqp.core.Message;
+import org.springframework.amqp.core.MessageProperties;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
+import java.util.List;
+import java.util.Map;
 
 import com.pmfml.mcne.config.RabbitMQConfig;
 
@@ -45,5 +48,29 @@ class NotificationDlqServiceTest {
     verify(rabbitTemplate, times(2))
         .send(eq(RabbitMQConfig.NOTIFICATION_EXCHANGE), eq(RabbitMQConfig.NOTIFICATION_ROUTING_KEY),
             any(Message.class));
+  }
+
+  @Test
+  @DisplayName("Should discard poison messages exceeding max retries")
+  void shouldDiscardPoisonMessages() {
+    Message mockMessage = mock(Message.class);
+    MessageProperties mockProps = mock(MessageProperties.class);
+    
+    lenient().when(mockMessage.getMessageProperties()).thenReturn(mockProps);
+    
+    Map<String, Object> xDeathProps = Map.of("count", 3L);
+    List<Map<String, Object>> xDeathList = List.of(xDeathProps);
+    Map<String, Object> headers = Map.of("x-death", xDeathList);
+    
+    lenient().when(mockProps.getHeaders()).thenReturn(headers);
+    
+    when(rabbitTemplate.receive(RabbitMQConfig.NOTIFICATION_DLQ))
+        .thenReturn(mockMessage)
+        .thenReturn(null);
+
+    int count = service.reprocessMessages();
+
+    assertThat(count).isEqualTo(0);
+    verify(rabbitTemplate, never()).send(eq(RabbitMQConfig.NOTIFICATION_EXCHANGE), anyString(), any(Message.class));
   }
 }
