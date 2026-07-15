@@ -1,8 +1,12 @@
 package com.pmfml.mcne.services;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
+
+import org.mockito.ArgumentCaptor;
+import com.pmfml.mcne.constants.MetadataKeys;
 
 import java.util.List;
 import java.util.UUID;
@@ -67,6 +71,26 @@ class NotificationDispatcherServiceTest {
                 // dispatchToQueue emits two WS events: RECEIVED (before publish) and QUEUED
                 // (after publish)
                 verify(wsPublisher, times(2)).publish(any());
+        }
+
+        @Test
+        @DisplayName("Should inject visualizer metadata when fromVisualizer is true")
+        void shouldInjectVisualizerMetadataWhenFromVisualizerIsTrue() {
+                NotificationRequest request = new NotificationRequest("a@b.com", "msg", NotificationChannel.EMAIL, null);
+                
+                when(mockStrategy.supports(NotificationChannel.EMAIL)).thenReturn(true);
+
+                NotificationLog log = NotificationLog.builder().id(UUID.randomUUID()).build();
+                when(notificationLogService.savePendingLog(any(NotificationRequest.class))).thenReturn(log);
+
+                service.dispatchToQueue(request, true);
+
+                ArgumentCaptor<NotificationRequest> requestCaptor = ArgumentCaptor.forClass(NotificationRequest.class);
+                verify(notificationLogService).savePendingLog(requestCaptor.capture());
+                
+                NotificationRequest capturedRequest = requestCaptor.getValue();
+                assertThat(capturedRequest.metadata()).isNotNull();
+                assertThat(capturedRequest.metadata()).containsEntry(MetadataKeys.IS_VISUALIZER_CLIENT, "true");
         }
 
         @Test
