@@ -292,4 +292,4 @@ curl -X POST http://localhost:8081/api/v1/notifications/dlq/reprocess \
 
 Coding styles, architecture designs, and patterns are documented in the reference guides:
 
-- [ARCHITECTURE.md](ARCHITECTURE.md): component diagrams, sequence flows, database entity relationships, retry logic, security model, and WebSocket event lifecycle.
+- [ARCHITECTURE.md](docs/ARCHITECTURE.md): component diagrams, sequence flows, database entity relationships, retry logic, security model, and WebSocket event lifecycle.
