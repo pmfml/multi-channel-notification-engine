@@ -161,6 +161,7 @@ Public endpoints (no key required):
 - `GET /api/v1/status`
 - `GET /actuator/health`, `GET /actuator/info`
 - WebSocket handshake at `/ws-mcne/**`
+- OpenAPI/Swagger UI endpoints (`/swagger-ui/**`, `/v3/api-docs/**`)
 
 | Property                | Env Variable   | Default (dev)  |
 | ----------------------- | -------------- | -------------- |

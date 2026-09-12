@@ -23,6 +23,7 @@ Acting as a central gateway in a microservices architecture, it allows different
 
 - **Language:** Java 21 (Virtual Threads, Records, Pattern Matching)
 - **Framework:** Spring Boot 3.5.14 with Spring Data JPA & Spring Security
+- **API Documentation:** OpenAPI 3 / Swagger UI
 - **Messaging Broker:** RabbitMQ 3.13 (AMQP protocol + Management Console)
 - **Resilience:** Spring Retry with exponential backoff & Dead Letter Queue (DLQ)
 - **Real-Time Broadcast:** Spring WebSocket + STOMP over SockJS
@@ -166,7 +167,12 @@ Endpoints that do **not** require authentication:
 - `GET /actuator/info`
 - WebSocket handshake at `/ws-mcne`
 
-## 📡 REST API Documentation
+## 📡 REST API Documentation & Interactive UI
+
+The engine features interactive API documentation provided by **OpenAPI (Swagger UI)**. 
+
+Once the application is running, navigate to [http://localhost:8081/swagger-ui.html](http://localhost:8081/swagger-ui.html) to explore the endpoints, view schemas, and test requests directly from your browser. 
+> **Note:** Click the green **Authorize** button in the top right corner to input your `X-API-Key` before testing the protected endpoints.
 
 | Method | Endpoint | Auth | Description | Status Code |
 | :--- | :--- | :---: | :--- | :--- |
