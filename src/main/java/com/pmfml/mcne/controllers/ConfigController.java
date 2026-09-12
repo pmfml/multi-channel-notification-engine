@@ -10,6 +10,9 @@ import org.springframework.web.bind.annotation.RestController;
 
 import java.util.Map;
 
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
+
 /**
  * REST Controller for runtime infrastructure configuration.
  *
@@ -17,6 +20,7 @@ import java.util.Map;
  */
 @RestController
 @RequestMapping("/api/v1/config")
+@Tag(name = "Configuration", description = "Endpoints for dynamic runtime configuration")
 public class ConfigController {
 
   private static final String CONSUMER_ID = "notificationConsumer";
@@ -36,6 +40,7 @@ public class ConfigController {
    * @return success message
    */
   @PutMapping("/concurrency")
+  @Operation(summary = "Adjust Consumer concurrency", description = "Sets the number of threads for the RabbitMQ listener in real-time. Useful to simulate failures (count=0) or peak processing.")
   public ResponseEntity<Map<String, String>> setConcurrency(@RequestParam int count) {
     SimpleMessageListenerContainer container =
         (SimpleMessageListenerContainer) registry.getListenerContainer(CONSUMER_ID);

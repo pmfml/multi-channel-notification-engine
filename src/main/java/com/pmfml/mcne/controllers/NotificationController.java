@@ -16,11 +16,15 @@ import com.pmfml.mcne.services.NotificationDlqService;
 
 import jakarta.validation.Valid;
 
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
+
 /**
  * REST Controller for exposing notification-related API endpoints.
  */
 @RestController
 @RequestMapping("/api/v1/notifications")
+@Tag(name = "Notifications", description = "Endpoints for asynchronous dispatch and notification management (DLQ)")
 public class NotificationController {
 
   private final NotificationDispatcherService dispatcherService;
@@ -49,6 +53,7 @@ public class NotificationController {
    * @return HTTP 202 Accepted
    */
   @PostMapping
+  @Operation(summary = "Send a notification", description = "Accepts a notification payload and routes it to the queue (RabbitMQ) for asynchronous processing.")
   public ResponseEntity<Void> sendNotification(
       @Valid @RequestBody NotificationRequest request,
       @RequestHeader(value = MetadataKeys.CLIENT_HEADER, required = false) String clientHeader) {
@@ -66,6 +71,7 @@ public class NotificationController {
    *         messages
    */
   @PostMapping("/dlq/reprocess")
+  @Operation(summary = "Reprocess DLQ", description = "Requeues all messages from the Dead Letter Queue back into the main processing queue.")
   public ResponseEntity<Map<String, Object>> reprocessDlq() {
     int count = dlqService.reprocessMessages();
     return ResponseEntity.ok(Map.of("message", count + " messages reprocessed successfully."));

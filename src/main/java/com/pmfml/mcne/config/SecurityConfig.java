@@ -52,8 +52,14 @@ public class SecurityConfig {
         .sessionManagement(s -> s.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
         .addFilterBefore(apiKeyFilter(), UsernamePasswordAuthenticationFilter.class)
         .authorizeHttpRequests(auth -> auth
-            // Public: health check, actuator, WebSocket handshake
-            .requestMatchers("/api/v1/status", "/actuator/**", "/ws-mcne/**").permitAll()
+          .requestMatchers(
+                "/api/v1/status", 
+                "/actuator/**", 
+                "/ws-mcne/**",
+                "/v3/api-docs/**",
+                "/swagger-ui/**",
+                "/swagger-ui.html"
+            ).permitAll()
             // Everything else requires a valid API key (enforced by the filter)
             .anyRequest().authenticated()
         );
@@ -86,7 +92,9 @@ public class SecurityConfig {
         // Skip filter for public paths (already permitted above, but guard here too)
         return path.startsWith("/api/v1/status")
             || path.startsWith("/actuator")
-            || path.startsWith("/ws-mcne");
+            || path.startsWith("/ws-mcne")
+            || path.startsWith("/v3/api-docs")
+            || path.startsWith("/swagger-ui");
       }
     };
   }
