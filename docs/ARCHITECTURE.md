@@ -271,3 +271,42 @@ To activate: `--spring.profiles.active=demo`
 | RabbitMQ AMQP | 5672          | 5672                                   |
 | RabbitMQ UI   | 15672         | 15672                                  |
 | MCNE App      | 8081          | 8081                                   |
+
+---
+
+## 9. Codebase Layout & Structural Mapping
+
+```
+multi-channel-notification-engine/
+├── docker-compose.yml                     # Infrastructure services (PostgreSQL 16, RabbitMQ 3.13)
+├── Dockerfile                             # Multi-stage production container build
+├── pom.xml                                # Maven project definition (Spring Boot 3.5.14, AWS SDK v2)
+├── docs/
+│   └── ARCHITECTURE.md                    # System architecture and technical specifications (this document)
+├── frontend/                              # React 19 Visualizer SPA
+│   ├── src/
+│   │   ├── components/                    # UI components (VisualPipeline, ControlPanel, EventLogTerminal, StatusSummary)
+│   │   ├── services/                      # REST API client and STOMP WebSocket subscriber
+│   │   └── types/                         # Shared TypeScript interfaces for events and payloads
+│   └── vite.config.ts                     # Vite build and dev server config
+├── test-scripts/                          # Automated load and demo test scripts
+│   ├── burst-test.sh                      # High-throughput batch test script
+│   └── test-demo-features.sh              # Failure injection and DLQ verification script
+└── src/
+    ├── main/java/com/pmfml/mcne/
+    │   ├── config/                        # RabbitMQ topology, Spring Security API Key filter, WebSockets, AWS
+    │   ├── controllers/                   # REST endpoints (/api/v1/notifications, config, status)
+    │   ├── dtos/                          # Immutable Java record DTOs (NotificationRequest, StatusResponse)
+    │   ├── entities/                      # JPA entities (NotificationLog) and enums (NotificationChannel, NotificationStatus)
+    │   ├── exceptions/                    # Centralized GlobalExceptionHandler and custom exceptions
+    │   ├── listeners/                     # RabbitMQ consumer listening on notification.queue
+    │   ├── services/                      # Dispatcher, WebSocket publisher, and concurrency helpers
+    │   └── strategies/                    # AbstractNotificationStrategy, EmailNotificationStrategy, SmsNotificationStrategy
+    ├── main/resources/
+    │   ├── db/migration/                  # Flyway SQL migration scripts (V1__init.sql)
+    │   └── application.properties         # Application configuration with environment variable defaults
+    └── test/java/com/pmfml/mcne/
+        ├── controllers/                   # Controller slice tests with MockMvc and Spring Security
+        ├── repositories/                  # JPA repository tests using H2 in-memory database
+        └── services/                      # Dispatcher, retry, consumer, and strategy unit tests
+```
